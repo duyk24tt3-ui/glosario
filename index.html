@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glosario ES–VI · Thuật ngữ Biên phiên dịch</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#14213D">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Glosario">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { display: ['"Bricolage Grotesque"', 'system-ui', 'sans-serif'] } } } };
+  try { if (localStorage.getItem('glo_dark') === '1') document.documentElement.classList.add('dark'); } catch (e) {}
+</script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+<style>
+  body { font-family: 'Bricolage Grotesque', system-ui, sans-serif; }
+  .flip { perspective: 1200px; }
+  .flip-inner { transition: transform .45s; transform-style: preserve-3d; position: relative; }
+  .flip-inner.on { transform: rotateY(180deg); }
+  .face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+  .back { position: absolute; inset: 0; transform: rotateY(180deg); }
+  @media (prefers-reduced-motion: reduce) { .flip-inner { transition: none; } }
+  :focus-visible { outline: 2px solid #E9B000; outline-offset: 2px; }
+</style>
+</head>
+<body class="bg-slate-100 text-slate-900 dark:bg-[#0F1626] dark:text-slate-100 min-h-screen">
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef } = React;
+
+const POS = ['Danh từ', 'Động từ', 'Tính từ', 'Trạng từ', 'Cụm từ'];
+const TOPICS = ['Luật', 'Kinh tế', 'Y tế', 'Ngoại giao', 'Du lịch', 'Văn hóa', 'Kỹ thuật', 'Chung'];
+const KEY = 'glosario_es_vi_v1';
+const emptyForm = { es: '', vi: '', pos: 'Danh từ', topic: 'Chung', family: [], exEs: '', exVi: '', note: '' };
+
+const load = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+const speak = t => { try { const u = new SpeechSynthesisUtterance(t); u.lang = 'es-ES'; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {} };
+const download = (name, text, type) => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+
+// Gộp danh sách từ bên ngoài vào danh sách hiện có (so khớp theo từ tiếng Tây Ban Nha, không phân biệt dấu/hoa thường)
+const mergeWords = (current, incoming, overwrite) => {
+  const idx = new Map(current.map((w, i) => [norm(w.es), i]));
+  const list = [...current];
+  let added = 0, updated = 0, skipped = 0;
+  incoming.forEach(w => {
+    if (!w || !w.es || !w.vi) { skipped++; return; }
+    const clean = { ...emptyForm, ...w, family: Array.isArray(w.family) ? w.family : [] };
+    const k = norm(w.es);
+    if (idx.has(k)) {
+      if (overwrite) { list[idx.get(k)] = { ...clean, id: list[idx.get(k)].id }; updated++; } else skipped++;
+    } else {
+      idx.set(k, list.length);
+      list.push({ ...clean, id: crypto.randomUUID(), created: Date.now() }); added++;
+    }
+  });
+  return { list, added, updated, skipped };
+};
+
+const inputCls = 'w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-[#18223A] px-3 py-2 text-sm';
+const btn = 'rounded-lg px-4 py-2 text-sm font-semibold transition';
+const btnMain = btn + ' bg-[#E9B000] text-[#14213D] hover:bg-[#f5c21b]';
+const btnSoft = btn + ' bg-slate-200 dark:bg-[#222E4C] hover:bg-slate-300 dark:hover:bg-[#2c3a5e]';
+
+function Field({ label, children }) {
+  return <label className="block"><span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{label}</span>{children}</label>;
+}
+
+function Library({ words, onEdit, onDelete, topics, q, setQ, topic, setTopic }) {
+  const list = useMemo(() => {
+    const n = norm(q);
+    return words.filter(w => (!topic || w.topic === topic) &&
+      (!n || norm(w.es).includes(n) || norm(w.vi).includes(n) || w.family.some(f => norm(f).includes(n))));
+  }, [words, q, topic]);
+  return (
+    <div>
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
+        <input className={inputCls} placeholder="Tìm nhanh ES hoặc VI (không cần dấu)…" value={q} onChange={e => setQ(e.target.value)} />
+        <select className={inputCls + ' sm:w-48'} value={topic} onChange={e => setTopic(e.target.value)}>
+          <option value="">Mọi chủ đề</option>
+          {topics.map(t => <option key={t}>{t}</option>)}
+        </select>
+      </div>
+      <p className="text-xs text-slate-500 mb-3">{list.length} / {words.length} thuật ngữ</p>
+      {list.length === 0 && <p className="py-12 text-center text-slate-500">Chưa có thuật ngữ nào khớp. Sang tab “Thêm từ” để tạo mục đầu tiên hoặc nhập file JSON.</p>}
+      <div className="grid gap-3 md:grid-cols-2">
+        {list.map(w => (
+          <article key={w.id} className="rounded-xl bg-white dark:bg-[#18223A] border border-slate-200 dark:border-slate-700 p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <h3 className="text-2xl font-extrabold text-[#14213D] dark:text-[#E9B000] leading-tight">{w.vi}</h3>
+                <p className="text-sm mt-1 text-slate-600 dark:text-slate-300">
+                  <button onClick={() => speak(w.es)} title="Nghe phát âm" className="font-semibold hover:underline">🔊 {w.es}</button>
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-1 text-xs">
+                <span className="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-[#222E4C]">{w.pos}</span>
+                <span className="px-2 py-0.5 rounded-full border border-[#E9B000]">{w.topic}</span>
+              </div>
+            </div>
+            {w.family.length > 0 && <div className="mt-2 flex flex-wrap gap-1">{w.family.map(f => <span key={f} className="text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-[#0F1626]">{f}</span>)}</div>}
+            {(w.exEs || w.exVi) && <div className="mt-3 text-sm border-l-4 border-[#E9B000] pl-3"><p className="italic">{w.exEs}</p><p className="text-slate-500 dark:text-slate-400">{w.exVi}</p></div>}
+            {w.note && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">📌 {w.note}</p>}
+            <div className="mt-3 flex gap-2">
+              <button className={btnSoft + ' !py-1 !px-3'} onClick={() => onEdit(w)}>Sửa</button>
+              <button className={btnSoft + ' !py-1 !px-3'} onClick={() => confirm('Xóa thuật ngữ “' + w.es + '”?') && onDelete(w.id)}>Xóa</button>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AddForm({ initial, onSave, onCancel, topics, settings }) {
+  const [f, setF] = useState(initial || emptyForm);
+  const [fam, setFam] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const set = (k, v) => setF(p => ({ ...p, [k]: v }));
+  const addFam = () => { const v = fam.trim(); if (v && !f.family.includes(v)) set('family', [...f.family, v]); setFam(''); };
+
+  const analyze = async () => {
+    if (!f.es.trim()) return setMsg('Hãy nhập từ/cụm từ tiếng Tây Ban Nha trước.');
+    if (!settings.apiKey) return setMsg('Chưa có Gemini API Key. Vào tab “Cài đặt” để dán key.');
+    setBusy(true); setMsg('');
+    const prompt = `Bạn là chuyên gia biên phiên dịch Tây Ban Nha - Việt. Phân tích thuật ngữ tiếng Tây Ban Nha: "${f.es.trim()}"` +
+      (f.topic ? ` (chủ đề: ${f.topic})` : '') +
+      `. Trả về DUY NHẤT một JSON với các khóa: "vi" (nghĩa tiếng Việt ngắn gọn, chuẩn thuật ngữ), "pos" (một trong: ${POS.join(', ')}), ` +
+      `"family" (mảng các từ cùng họ tiếng Tây Ban Nha, tối đa 6), "exEs" (một câu ví dụ tiếng Tây Ban Nha), "exVi" (bản dịch tiếng Việt của câu đó), "note" (ghi chú ngắn: collocation hoặc false friend nếu có, nếu không để rỗng).`;
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(settings.model)}:generateContent?key=${encodeURIComponent(settings.apiKey)}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.3 } })
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error?.message || 'Lỗi ' + r.status);
+      const txt = j.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
+      const d = JSON.parse(txt.replace(/```json|```/g, '').trim());
+      setF(p => ({ ...p, vi: d.vi || p.vi, pos: POS.includes(d.pos) ? d.pos : p.pos,
+        family: Array.isArray(d.family) ? [...new Set([...p.family, ...d.family.map(String)])] : p.family,
+        exEs: d.exEs || p.exEs, exVi: d.exVi || p.exVi, note: d.note || p.note }));
+      setMsg('Đã điền tự động. Hãy kiểm tra lại trước khi lưu.');
+    } catch (e) { setMsg('Không phân tích được: ' + e.message); }
+    setBusy(false);
+  };
+
+  const submit = () => {
+    if (!f.es.trim() || !f.vi.trim()) return setMsg('Cần có cả từ tiếng Tây Ban Nha và nghĩa tiếng Việt.');
+    onSave({ ...f, es: f.es.trim(), vi: f.vi.trim() });
+    if (!initial) { setF(emptyForm); setMsg('Đã lưu.'); }
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto rounded-xl bg-white dark:bg-[#18223A] border border-slate-200 dark:border-slate-700 p-5 space-y-4">
+      <h2 className="text-xl font-extrabold">{initial ? 'Sửa thuật ngữ' : 'Thêm thuật ngữ'}</h2>
+      <div className="grid sm:grid-cols-2 gap-3">
+        <Field label="Từ / cụm từ tiếng Tây Ban Nha *"><input className={inputCls} value={f.es} onChange={e => set('es', e.target.value)} placeholder="gobernar" /></Field>
+        <Field label="Nghĩa tiếng Việt *"><input className={inputCls + ' !text-lg !font-bold'} value={f.vi} onChange={e => set('vi', e.target.value)} placeholder="cai trị, điều hành" /></Field>
+        <Field label="Từ loại"><select className={inputCls} value={f.pos} onChange={e => set('pos', e.target.value)}>{POS.map(p => <option key={p}>{p}</option>)}</select></Field>
+        <Field label="Chủ đề (chọn hoặc gõ chủ đề mới)">
+          <input className={inputCls} list="topics" value={f.topic} onChange={e => set('topic', e.target.value)} />
+          <datalist id="topics">{topics.map(t => <option key={t} value={t} />)}</datalist>
+        </Field>
+      </div>
+      <button className={btnMain} disabled={busy} onClick={analyze}>{busy ? 'Đang phân tích…' : '✨ Tự động phân tích bằng AI'}</button>
+      <Field label="Họ từ (Word Family) — gõ rồi nhấn Enter hoặc “Thêm”">
+        <div className="flex gap-2">
+          <input className={inputCls} value={fam} onChange={e => setFam(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addFam())} placeholder="gobierno" />
+          <button type="button" className={btnSoft} onClick={addFam}>Thêm</button>
+        </div>
+      </Field>
+      {f.family.length > 0 && <div className="flex flex-wrap gap-2">{f.family.map(x =>
+        <span key={x} className="text-sm px-2 py-1 rounded bg-slate-100 dark:bg-[#0F1626]">{x}
+          <button className="ml-2 text-slate-500" aria-label={'Bỏ ' + x} onClick={() => set('family', f.family.filter(y => y !== x))}>×</button></span>)}</div>}
+      <div className="grid sm:grid-cols-2 gap-3">
+        <Field label="Câu ví dụ (ES)"><textarea rows="2" className={inputCls} value={f.exEs} onChange={e => set('exEs', e.target.value)} /></Field>
+        <Field label="Câu ví dụ (VI)"><textarea rows="2" className={inputCls} value={f.exVi} onChange={e => set('exVi', e.target.value)} /></Field>
+      </div>
+      <Field label="Ghi chú chuyên ngành (collocations, false friends…)"><textarea rows="2" className={inputCls} value={f.note} onChange={e => set('note', e.target.value)} /></Field>
+      {msg && <p className="text-sm text-[#b88700] dark:text-[#E9B000]" role="status">{msg}</p>}
+      <div className="flex gap-2"><button className={btnMain} onClick={submit}>Lưu thuật ngữ</button>{onCancel && <button className={btnSoft} onClick={onCancel}>Hủy</button>}</div>
+    </div>
+  );
+}
+
+const shuffle = a => { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+
+function TopicPick({ topics, topic, setTopic }) {
+  return <select className={inputCls + ' !w-auto'} value={topic} onChange={e => setTopic(e.target.value)}>
+    <option value="">Mọi chủ đề</option>{topics.map(t => <option key={t}>{t}</option>)}</select>;
+}
+
+function Cards({ words, topics }) {
+  const [topic, setTopic] = useState('');
+  const [dir, setDir] = useState('es-vi');
+  const [i, setI] = useState(0);
+  const [flip, setFlip] = useState(false);
+  const [deck, setDeck] = useState([]);
+  useEffect(() => { setDeck(words.filter(w => !topic || w.topic === topic)); setI(0); setFlip(false); }, [words, topic]);
+  const w = deck[i];
+  const go = d => { setFlip(false); setTimeout(() => setI(x => (x + d + deck.length) % deck.length), 120); };
+  const front = w && (dir === 'es-vi' ? { big: w.es, sub: 'Biên dịch ES → VI' } : { big: w.vi, sub: 'Phiên dịch VI → ES' });
+  const back = w && (dir === 'es-vi' ? w.vi : w.es);
+  return (
+    <div className="max-w-xl mx-auto">
+      <div className="flex flex-wrap gap-2 mb-4 items-center">
+        <button className={dir === 'es-vi' ? btnMain : btnSoft} onClick={() => setDir('es-vi')}>Biên dịch ES → VI</button>
+        <button className={dir === 'vi-es' ? btnMain : btnSoft} onClick={() => setDir('vi-es')}>Phiên dịch VI → ES</button>
+        <TopicPick topics={topics} topic={topic} setTopic={setTopic} />
+      </div>
+      {!w ? <p className="py-12 text-center text-slate-500">Chưa có thẻ nào trong chủ đề này.</p> : <>
+        <div className="flip cursor-pointer" onClick={() => setFlip(f => !f)} role="button" tabIndex="0" onKeyDown={e => (e.key === ' ' || e.key === 'Enter') && (e.preventDefault(), setFlip(f => !f))} aria-label="Lật thẻ">
+          <div className={'flip-inner h-72 ' + (flip ? 'on' : '')}>
+            <div className="face absolute inset-0 rounded-2xl bg-white dark:bg-[#18223A] border-2 border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center p-6 text-center">
+              <p className="text-xs text-slate-500 mb-3">{front.sub} · {w.topic}</p>
+              <p className="text-4xl font-extrabold">{front.big}</p>
+              <p className="text-xs text-slate-400 mt-6">Nhấn để lật</p>
+            </div>
+            <div className="face back rounded-2xl bg-[#14213D] text-white border-2 border-[#E9B000] flex flex-col items-center justify-center p-6 text-center">
+              <p className="text-4xl font-extrabold text-[#E9B000]">{back}</p>
+              <p className="text-xs mt-2 opacity-70">{w.pos}</p>
+              {w.exEs && <p className="mt-4 text-sm italic opacity-90">{w.exEs}<br /><span className="not-italic opacity-60">{w.exVi}</span></p>}
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-between items-center mt-4">
+          <button className={btnSoft} onClick={() => go(-1)}>Trước</button>
+          <span className="text-sm text-slate-500">{i + 1} / {deck.length}</span>
+          <button className={btnSoft} onClick={() => { setDeck(shuffle(deck)); setI(0); setFlip(false); }}>Xáo trộn</button>
+          <button className={btnMain} onClick={() => go(1)}>Sau</button>
+        </div>
+      </>}
+    </div>
+  );
+}
+
+function Drill({ words, topics }) {
+  const [topic, setTopic] = useState('');
+  const [dir, setDir] = useState('es-vi');
+  const [secs, setSecs] = useState(5);
+  const [cur, setCur] = useState(null);
+  const [left, setLeft] = useState(0);
+  const [show, setShow] = useState(false);
+  const [score, setScore] = useState({ ok: 0, no: 0 });
+  const pool = useMemo(() => words.filter(w => !topic || w.topic === topic), [words, topic]);
+  const next = () => {
+    if (!pool.length) return;
+    let w; do { w = pool[Math.floor(Math.random() * pool.length)]; } while (pool.length > 1 && cur && w.id === cur.id);
+    setCur(w); setShow(false); setLeft(secs);
+  };
+  useEffect(() => {
+    if (!cur || show) return;
+    if (left <= 0) { setShow(true); return; }
+    const t = setTimeout(() => setLeft(l => l - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cur, show, left]);
+  const mark = ok => { setScore(s => ok ? { ...s, ok: s.ok + 1 } : { ...s, no: s.no + 1 }); next(); };
+  const prompt = cur && (dir === 'es-vi' ? cur.es : cur.vi);
+  const answer = cur && (dir === 'es-vi' ? cur.vi : cur.es);
+  return (
+    <div className="max-w-xl mx-auto">
+      <div className="flex flex-wrap gap-2 mb-4 items-center">
+        <button className={dir === 'es-vi' ? btnMain : btnSoft} onClick={() => setDir('es-vi')}>ES → VI</button>
+        <button className={dir === 'vi-es' ? btnMain : btnSoft} onClick={() => setDir('vi-es')}>VI → ES</button>
+        {[3, 5, 10].map(s => <button key={s} className={secs === s ? btnMain : btnSoft} onClick={() => setSecs(s)}>{s}s</button>)}
+        <TopicPick topics={topics} topic={topic} setTopic={setTopic} />
+      </div>
+      <div className="rounded-2xl bg-white dark:bg-[#18223A] border-2 border-slate-200 dark:border-slate-700 p-6 text-center min-h-[18rem] flex flex-col items-center justify-center">
+        {!cur ? <>
+          <p className="mb-4 text-slate-500">Dịch nhẩm hoặc nói to trước khi hết giờ, rồi tự chấm.</p>
+          <button className={btnMain} disabled={!pool.length} onClick={next}>Bắt đầu luyện</button>
+          {!pool.length && <p className="mt-3 text-sm text-slate-500">Chưa có thuật ngữ nào để luyện.</p>}
+        </> : <>
+          <div className="w-full h-2 rounded bg-slate-200 dark:bg-[#0F1626] mb-4 overflow-hidden"><div className="h-2 bg-[#E9B000]" style={{ width: show ? '0%' : (left / secs * 100) + '%', transition: 'width 1s linear' }} /></div>
+          <p className="text-5xl font-extrabold tabular-nums mb-3">{show ? '⏱' : left}</p>
+          <p className="text-3xl font-extrabold">{prompt}</p>
+          {show ? <p className="mt-5 text-3xl font-extrabold text-[#b88700] dark:text-[#E9B000]">{answer}</p> :
+            <button className={btnSoft + ' mt-5'} onClick={() => setShow(true)}>Hiện đáp án</button>}
+        </>}
+      </div>
+      {cur && show && <div className="flex gap-2 justify-center mt-4">
+        <button className={btnSoft} onClick={() => mark(false)}>Chưa nhớ</button>
+        <button className={btnMain} onClick={() => mark(true)}>Đã nhớ</button></div>}
+      <p className="text-center text-sm text-slate-500 mt-3">Đã nhớ {score.ok} · Chưa nhớ {score.no}</p>
+    </div>
+  );
+}
+
+function Settings({ settings, setSettings, words, setWords, onSync, syncing, syncMsg, canInstall, onInstall }) {
+  const fileRef = useRef();
+  const [msg, setMsg] = useState('');
+  const toCSV = () => {
+    const q = s => '"' + String(s || '').replace(/"/g, '""') + '"';
+    const rows = [['es', 'vi', 'pos', 'topic', 'family', 'exEs', 'exVi', 'note'].join(',')]
+      .concat(words.map(w => [w.es, w.vi, w.pos, w.topic, w.family.join('; '), w.exEs, w.exVi, w.note].map(q).join(',')));
+    download('glosario-es-vi.csv', '\uFEFF' + rows.join('\n'), 'text/csv;charset=utf-8');
+  };
+  const onImport = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const data = JSON.parse(r.result);
+        const arr = Array.isArray(data) ? data : data.words;
+        if (!Array.isArray(arr)) throw new Error('File phải là mảng JSON các thuật ngữ.');
+        const res = mergeWords(words, arr, false);
+        setWords(res.list);
+        setMsg(`Đã nhập ${res.added} thuật ngữ mới, bỏ qua ${res.skipped} mục trùng hoặc thiếu dữ liệu.`);
+      } catch (err) { setMsg('Không nhập được: ' + err.message); }
+    };
+    r.readAsText(file); e.target.value = '';
+  };
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      <section className="rounded-xl bg-white dark:bg-[#18223A] border border-slate-200 dark:border-slate-700 p-5 space-y-3">
+        <h2 className="text-xl font-extrabold">Gemini API</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Lấy key miễn phí tại aistudio.google.com. Key chỉ lưu trong trình duyệt của bạn và chỉ gửi tới Google.</p>
+        <Field label="API Key"><input type="password" className={inputCls} value={settings.apiKey} onChange={e => setSettings({ ...settings, apiKey: e.target.value })} autoComplete="off" /></Field>
+        <Field label="Tên model (đổi nếu Google ngừng hỗ trợ model cũ như gemini-1.5-flash)"><input className={inputCls} value={settings.model} onChange={e => setSettings({ ...settings, model: e.target.value })} /></Field>
+      </section>
+      <section className="rounded-xl bg-white dark:bg-[#18223A] border border-slate-200 dark:border-slate-700 p-5 space-y-3">
+        <h2 className="text-xl font-extrabold">Đồng bộ từ vựng</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Giữ một file JSON trên GitHub (mặc định <code>vocab.json</code> cạnh <code>index.html</code>). Mọi thiết bị bấm đồng bộ sẽ kéo các từ mới về. Đồng bộ chỉ thêm hoặc cập nhật từ, không xóa từ.</p>
+        <Field label="Địa chỉ file JSON (đường dẫn tương đối hoặc link raw.githubusercontent.com)"><input className={inputCls} value={settings.syncUrl} onChange={e => setSettings({ ...settings, syncUrl: e.target.value })} placeholder="vocab.json" /></Field>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={settings.autoSync} onChange={e => setSettings({ ...settings, autoSync: e.target.checked })} /> Tự đồng bộ mỗi khi mở ứng dụng</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={settings.overwrite} onChange={e => setSettings({ ...settings, overwrite: e.target.checked })} /> Ghi đè nội dung nếu từ đã có (lấy bản trên GitHub làm chuẩn)</label>
+        <button className={btnMain} disabled={syncing} onClick={() => onSync(false)}>{syncing ? 'Đang đồng bộ…' : '⟳ Đồng bộ ngay'}</button>
+        {syncMsg && <p className="text-sm text-[#b88700] dark:text-[#E9B000]" role="status">{syncMsg}</p>}
+      </section>
+      <section className="rounded-xl bg-white dark:bg-[#18223A] border border-slate-200 dark:border-slate-700 p-5 space-y-3">
+        <h2 className="text-xl font-extrabold">Cài đặt thành ứng dụng</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Android/Chrome/Edge: bấm nút bên dưới (hoặc menu ⋮ → Cài đặt ứng dụng). iPhone/iPad: mở bằng Safari, bấm nút Chia sẻ → Thêm vào MH chính. Sau khi cài, ứng dụng mở toàn màn hình và vẫn dùng được khi mất mạng.</p>
+        {canInstall ? <button className={btnMain} onClick={onInstall}>Cài đặt ứng dụng</button> : <p className="text-sm text-slate-500">Nút cài đặt chỉ hiện khi trình duyệt cho phép (cần mở bằng link https, không phải file trên máy, và chưa cài trước đó).</p>}
+      </section>
+      <section className="rounded-xl bg-white dark:bg-[#18223A] border border-slate-200 dark:border-slate-700 p-5 space-y-3">
+        <h2 className="text-xl font-extrabold">Sao lưu dữ liệu</h2>
+        <div className="flex flex-wrap gap-2">
+          <button className={btnMain} onClick={() => download('glosario-es-vi.json', JSON.stringify(words, null, 2), 'application/json')}>Xuất JSON</button>
+          <button className={btnSoft} onClick={toCSV}>Xuất CSV</button>
+          <button className={btnSoft} onClick={() => fileRef.current.click()}>Nhập JSON</button>
+          <input ref={fileRef} type="file" accept=".json,application/json" className="hidden" onChange={onImport} />
+        </div>
+        {msg && <p className="text-sm text-[#b88700] dark:text-[#E9B000]" role="status">{msg}</p>}
+        <p className="text-xs text-slate-500">Mỗi mục JSON gồm: es, vi, pos, topic, family (mảng), exEs, exVi, note. Mục trùng từ tiếng Tây Ban Nha sẽ được bỏ qua.</p>
+      </section>
+    </div>
+  );
+}
+
+function App() {
+  const [words, setWords] = useState(() => load(KEY, []));
+  const [settings, setSettings] = useState(() => ({ apiKey: '', model: 'gemini-2.5-flash', syncUrl: 'vocab.json', autoSync: false, overwrite: false, ...load(KEY + '_cfg', {}) }));
+  const wordsRef = useRef([]);
+  wordsRef.current = words;
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState('');
+  const [installEvt, setInstallEvt] = useState(null);
+  const [tab, setTab] = useState('lib');
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));
+  const [editing, setEditing] = useState(null);
+  const [q, setQ] = useState('');
+  const [topic, setTopic] = useState('');
+  useEffect(() => save(KEY, words), [words]);
+  useEffect(() => save(KEY + '_cfg', settings), [settings]);
+  useEffect(() => { document.documentElement.classList.toggle('dark', dark); save('glo_dark', dark ? '1' : '0'); try { localStorage.setItem('glo_dark', dark ? '1' : '0'); } catch (e) {} }, [dark]);
+  const topics = useMemo(() => [...new Set([...TOPICS, ...words.map(w => w.topic).filter(Boolean)])], [words]);
+
+  const syncNow = async (silent) => {
+    setSyncing(true);
+    if (!silent) setSyncMsg('');
+    try {
+      const base = new URL(settings.syncUrl || 'vocab.json', location.href).href;
+      const r = await fetch(base + (base.includes('?') ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status + (r.status === 404 ? ' (chưa có file vocab.json trên GitHub?)' : ''));
+      const data = await r.json();
+      const arr = Array.isArray(data) ? data : data.words;
+      if (!Array.isArray(arr)) throw new Error('File phải là mảng JSON các thuật ngữ.');
+      const res = mergeWords(wordsRef.current, arr, settings.overwrite);
+      setWords(res.list);
+      setSyncMsg(`Đồng bộ xong: thêm ${res.added}, cập nhật ${res.updated}, bỏ qua ${res.skipped}.`);
+    } catch (e) { setSyncMsg('Không đồng bộ được: ' + e.message); }
+    setSyncing(false);
+  };
+
+  useEffect(() => {
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+    const onPrompt = e => { e.preventDefault(); setInstallEvt(e); };
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    window.addEventListener('appinstalled', () => setInstallEvt(null));
+    if (settings.autoSync && location.protocol.startsWith('http')) syncNow(true);
+    return () => window.removeEventListener('beforeinstallprompt', onPrompt);
+  }, []);
+  const install = async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; setInstallEvt(null); };
+
+  const saveWord = w => {
+    if (w.id) setWords(words.map(x => x.id === w.id ? w : x));
+    else setWords([{ ...w, id: crypto.randomUUID(), created: Date.now() }, ...words]);
+    if (w.id) { setEditing(null); setTab('lib'); }
+  };
+  const tabs = [['lib', 'Thư viện'], ['add', 'Thêm từ'], ['card', 'Flashcard'], ['drill', 'Phản xạ'], ['set', 'Cài đặt']];
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 pb-16">
+      <header className="flex items-center justify-between py-5">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight">Glosario ES–VI</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Thuật ngữ biên phiên dịch Tây Ban Nha – Việt</p>
+        </div>
+        <div className="flex gap-2">
+          <button className={btnSoft} disabled={syncing} onClick={() => syncNow(false)} aria-label="Đồng bộ từ vựng">{syncing ? '…' : '⟳ Đồng bộ'}</button>
+          <button className={btnSoft} onClick={() => setDark(!dark)} aria-label="Đổi giao diện sáng/tối">{dark ? '☀️' : '🌙'}</button>
+        </div>
+      </header>
+      <nav className="flex gap-1 overflow-x-auto mb-6 border-b border-slate-300 dark:border-slate-700">
+        {tabs.map(([k, l]) => (
+          <button key={k} onClick={() => { setTab(k); if (k !== 'add') setEditing(null); }}
+            className={'px-4 py-2 text-sm font-semibold whitespace-nowrap border-b-4 ' + (tab === k ? 'border-[#E9B000]' : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white')}>{l}</button>
+        ))}
+      </nav>
+      {syncMsg && tab !== 'set' && <p className="mb-4 text-sm rounded-lg px-3 py-2 bg-[#E9B000]/20" role="status">{syncMsg} <button className="underline ml-2" onClick={() => setSyncMsg('')}>Đóng</button></p>}
+      <main>
+        {tab === 'lib' && <Library words={words} topics={topics} q={q} setQ={setQ} topic={topic} setTopic={setTopic}
+          onEdit={w => { setEditing(w); setTab('add'); }} onDelete={id => setWords(words.filter(w => w.id !== id))} />}
+        {tab === 'add' && <AddForm key={editing ? editing.id : 'new'} initial={editing} topics={topics} settings={settings}
+          onSave={saveWord} onCancel={editing ? () => { setEditing(null); setTab('lib'); } : null} />}
+        {tab === 'card' && <Cards words={words} topics={topics} />}
+        {tab === 'drill' && <Drill words={words} topics={topics} />}
+        {tab === 'set' && <Settings settings={settings} setSettings={setSettings} words={words} setWords={setWords}
+          onSync={syncNow} syncing={syncing} syncMsg={syncMsg} canInstall={!!installEvt} onInstall={install} />}
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

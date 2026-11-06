@@ -1,0 +1,5 @@
+[
+  {"es":"gobernar","vi":"cai trị, điều hành","pos":"Động từ","topic":"Luật","family":["gobierno","gobernante","gubernamental"],"exEs":"El presidente gobierna el país con un gabinete reducido.","exVi":"Tổng thống điều hành đất nước với một nội các tinh gọn.","note":""},
+  {"es":"demandante","vi":"nguyên đơn","pos":"Danh từ","topic":"Luật","family":["demanda","demandar","demandado"],"exEs":"El demandante presentó las pruebas ante el tribunal.","exVi":"Nguyên đơn đã nộp chứng cứ trước tòa.","note":"demanda: trong luật là 'đơn kiện', trong kinh tế là 'cầu'."},
+  {"es":"embajada","vi":"đại sứ quán","pos":"Danh từ","topic":"Ngoại giao","family":["embajador","embajadora"],"exEs":"La embajada emitió un comunicado oficial.","exVi":"Đại sứ quán đã ra một thông cáo chính thức.","note":"Collocation: la embajada de Vietnam en España."}
+]
