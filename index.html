@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GLOSARIO · </title>
+<title>Glosario ES–VI · Thuật ngữ Biên phiên dịch</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#14213D">
 <meta name="mobile-web-app-capable" content="yes">
@@ -11,7 +11,8 @@
 <meta name="apple-mobile-web-app-title" content="Glosario">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-192.png">
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { display: ['"Bricolage Grotesque"', 'system-ui', 'sans-serif'] } } } };
@@ -21,17 +22,55 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
 <style>
-  body { font-family: 'Bricolage Grotesque', system-ui, sans-serif; }
-  .flip { perspective: 1200px; }
-  .flip-inner { transition: transform .45s; transform-style: preserve-3d; position: relative; }
-  .flip-inner.on { transform: rotateY(180deg); }
-  .face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-  .back { position: absolute; inset: 0; transform: rotateY(180deg); }
-  @media (prefers-reduced-motion: reduce) { .flip-inner { transition: none; } }
-  :focus-visible { outline: 2px solid #E9B000; outline-offset: 2px; }
+:root{--bg:#F7F5EF;--surface:#FFFFFF;--surface2:#F0EDE3;--border:#E3DFD1;--text:#202A3A;--muted:#5F6B7D;--brand:#14213D;--gold:#E9B000;--goldink:#7A5800;--ok:#23866B;--err:#C65353;--btnbg:#14213D;--btnfg:#F7F5EF;--face:#14213D;--art:#14213D;--toast:#14213D;--toastfg:#F7F5EF;--shadow:0 1px 2px rgba(20,33,61,.05),0 6px 18px rgba(20,33,61,.06)}
+.dark{--bg:#0D1424;--surface:#172239;--surface2:#1E2B47;--border:#2B3A56;--text:#F3F5F8;--muted:#A5B0C4;--brand:#F3F5F8;--goldink:#F2C94C;--ok:#3DBE98;--err:#E58A8A;--btnbg:#E9B000;--btnfg:#14213D;--face:#1E2B47;--art:#3A4C72;--toast:#F3F5F8;--toastfg:#0D1424;--shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.25)}
+html{scroll-padding-top:5rem}
+body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.h-display{font-family:'Bricolage Grotesque',Inter,system-ui,sans-serif}
+.t-muted{color:var(--muted)}.t-brand{color:var(--brand)}.t-gold{color:var(--goldink)}.t-text2{opacity:.85}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);transition:transform .2s,border-color .2s}
+.lift:hover{transform:translateY(-2px);border-color:var(--gold)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:40px;padding:.55rem 1rem;border-radius:12px;border:1px solid transparent;font-size:.875rem;font-weight:600;transition:background .18s,transform .18s,filter .18s;cursor:pointer}
+.btn:active{transform:scale(.98)}.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:var(--btnbg);color:var(--btnfg)}.btn-primary:hover:not(:disabled){filter:brightness(1.12)}
+.btn-secondary{background:var(--surface);border-color:var(--border);color:var(--text)}.btn-secondary:hover:not(:disabled){background:var(--surface2)}
+.btn-ghost{background:transparent;color:var(--muted)}.btn-ghost:hover:not(:disabled){background:var(--surface2);color:var(--text)}
+.btn-icon{width:40px;padding:0}
+.btn-ok{background:var(--ok);color:#fff}.btn-ok:hover{filter:brightness(1.1)}
+.btn-no{background:transparent;border-color:var(--err);color:var(--err)}.btn-no:hover{background:rgba(198,83,83,.1)}
+.input{width:100%;min-height:42px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);padding:.6rem .85rem;font-size:.9rem;transition:border-color .18s,box-shadow .18s}
+.input:hover{border-color:var(--muted)}.input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(233,176,0,.25)}
+textarea.input{resize:vertical}
+.field-label{display:block;font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:.35rem}
+.badge{display:inline-flex;align-items:center;padding:.15rem .6rem;border-radius:999px;font-size:.72rem;font-weight:600;background:var(--surface2);color:var(--muted)}
+.badge-gold{background:rgba(233,176,0,.16);color:var(--goldink)}
+.chip{display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .65rem;border-radius:999px;font-size:.8rem;background:var(--surface2);border:1px solid var(--border);color:var(--text)}
+.chip.on{background:var(--gold);border-color:var(--gold);color:#14213D;font-weight:600}
+.seg{display:inline-flex;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:3px}
+.seg button{padding:.4rem .8rem;border-radius:9px;font-size:.8rem;font-weight:600;color:var(--muted);transition:.18s}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.app-header{background:var(--surface);border-bottom:1px solid var(--border)}
+.nav-item{display:inline-flex;align-items:center;gap:.5rem;padding:.5rem .9rem;border-radius:10px;font-size:.875rem;font-weight:600;color:var(--muted);transition:.18s}
+.nav-item:hover{background:var(--surface2);color:var(--text)}.nav-item.on{background:var(--surface2);color:var(--brand);box-shadow:inset 0 -2px 0 var(--gold)}
+.bottom-bar{background:var(--surface);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom)}
+.bb-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:.55rem 0;font-size:11px;font-weight:600;color:var(--muted)}.bb-item.on{color:var(--brand)}.bb-item.on svg{color:var(--goldink)}
+.bar{height:8px;background:var(--surface2);border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:var(--gold);border-radius:99px;transition:width .25s}
+.step{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:8px;background:var(--brand);color:var(--surface);font-size:.75rem;font-weight:700}
+.ai-card{border-color:var(--gold);background:rgba(233,176,0,.07)}
+.notice{border-radius:12px;padding:.6rem .85rem;font-size:.85rem}.notice-ok{background:rgba(35,134,107,.12);color:var(--ok)}.notice-err{background:rgba(198,83,83,.12);color:var(--err)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:5.5rem;z-index:60;display:flex;gap:.75rem;align-items:center;max-width:min(92vw,520px);padding:.7rem 1rem;border-radius:12px;background:var(--toast);color:var(--toastfg);font-size:.85rem;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+@media(min-width:768px){.toast{bottom:1.5rem}}
+.skeleton{background:var(--surface2);border-radius:8px;animation:pulse 1.2s ease-in-out infinite}@keyframes pulse{50%{opacity:.5}}
+.spin{width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:rot .7s linear infinite}@keyframes rot{to{transform:rotate(360deg)}}
+.modal-bg{background:rgba(13,20,36,.6)}.sheet{animation:up .22s ease}@keyframes up{from{transform:translateY(24px);opacity:0}}
+.flip{perspective:1200px}.flip-inner{transition:transform .5s;transform-style:preserve-3d;position:relative}.flip-inner.on{transform:rotateY(180deg)}
+.face{backface-visibility:hidden;-webkit-backface-visibility:hidden}.back{position:absolute;inset:0;transform:rotateY(180deg)}
+.ring{transition:stroke-dashoffset 1s linear}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
-<body class="bg-slate-100 text-slate-900 dark:bg-[#0F1626] dark:text-slate-100 min-h-screen">
+<body class="min-h-screen">
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useEffect, useMemo, useRef } = React;
@@ -116,13 +155,82 @@ const decodeCode = async code => {
   return JSON.parse(new TextDecoder().decode(bytes));
 };
 
-const inputCls = 'w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-[#18223A] px-3 py-2 text-sm';
-const btn = 'rounded-lg px-4 py-2 text-sm font-semibold transition';
-const btnMain = btn + ' bg-[#E9B000] text-[#14213D] hover:bg-[#f5c21b]';
-const btnSoft = btn + ' bg-slate-200 dark:bg-[#222E4C] hover:bg-slate-300 dark:hover:bg-[#2c3a5e]';
+const inputCls = 'input';
+const btn = 'btn';
+const btnMain = 'btn btn-primary';
+const btnSoft = 'btn btn-secondary';
 
-function Field({ label, children }) {
-  return <label className="block"><span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{label}</span>{children}</label>;
+const ICONS = {
+  library: 'M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z|M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z',
+  plus: 'M5 12h14|M12 5v14', cards: 'M7 7h13v13H7z|M4 17V4h13', zap: 'M13 2 3 14h9l-1 8 10-12h-9z',
+  settings: 'M21 4h-7|M10 4H3|M21 12h-9|M8 12H3|M21 20h-5|M12 20H3|M14 2v4|M8 10v4|M16 18v4',
+  sync: 'M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8|M21 3v5h-5|M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16|M8 16H3v5',
+  sun: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z|M12 2v2|M12 20v2|m4.93 4.93 1.41 1.41|m17.66 17.66 1.41 1.41|M2 12h2|M20 12h2|m6.34 17.66-1.41 1.41|m19.07 4.93-1.41 1.41',
+  moon: 'M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z', vol: 'M11 5 6 9H2v6h4l5 4z|M15.54 8.46a5 5 0 0 1 0 7.07|M19.07 4.93a10 10 0 0 1 0 14.14',
+  mute: 'M11 5 6 9H2v6h4l5 4z|m22 9-6 6|m16 9 6 6', x: 'M18 6 6 18|m6 6 12 12', search: 'm21 21-4.3-4.3|M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z',
+  edit: 'M12 20h9|M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z', trash: 'M3 6h18|M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6|M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2',
+  sparkles: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z|M19 3v4|M17 5h4', left: 'm15 18-6-6 6-6', right: 'm9 18 6-6-6-6',
+  shuffle: 'M16 3h5v5|M4 20 21 3|M21 16v5h-5|M15 15l6 6|M4 4l5 5', ext: 'M15 3h6v6|M10 14 21 3|M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6',
+  eye: 'M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z|M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  eyeoff: 'M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a13.16 13.16 0 0 1-1.67 2.68|M6.61 6.61A13.53 13.53 0 0 0 2 12s3 8 10 8a9.74 9.74 0 0 0 5.39-1.61|m2 2 20 20',
+  clock: 'M12 6v6l4 2|M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', check: 'M20 6 9 17l-5-5', redo: 'M3 12a9 9 0 1 0 3-6.7L3 8|M3 3v5h5'
+};
+const Icon = ({ n, s = 18 }) => (
+  <svg viewBox="0 0 24 24" width={s} height={s} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {ICONS[n].split('|').map((d, i) => <path key={i} d={d} />)}
+  </svg>
+);
+const LogoMark = ({ s = 40 }) => (
+  <svg viewBox="0 0 64 64" width={s} height={s} role="img" aria-label="Logo Glosario ES–VI">
+    <rect width="64" height="64" rx="15" fill="#14213D" />
+    <path d="M10 24c8-3.5 16-3 22 2.5v24c-6-5-14-5.5-22-2z" fill="#F7F5EF" />
+    <path d="M54 24c-8-3.5-16-3-22 2.5v24c6-5 14-5.5 22-2z" fill="#F7F5EF" />
+    <path d="M32 26.5v24" stroke="#E9B000" strokeWidth="2.6" strokeLinecap="round" />
+    <path d="M15 33q6-1.6 12 1M15 39q6-1.6 12 1" stroke="#14213D" strokeOpacity=".28" strokeWidth="2" strokeLinecap="round" fill="none" />
+    <path d="M37 7h15a4 4 0 0 1 4 4v7a4 4 0 0 1-4 4h-5l-5.5 5v-5H37a4 4 0 0 1-4-4v-7a4 4 0 0 1 4-4z" fill="#E9B000" />
+    <circle cx="40.5" cy="14.5" r="1.7" fill="#14213D" /><circle cx="44.5" cy="14.5" r="1.7" fill="#14213D" /><circle cx="48.5" cy="14.5" r="1.7" fill="#14213D" />
+  </svg>
+);
+const EmptyArt = ({ title, text, action }) => (
+  <div className="card p-10 text-center flex flex-col items-center gap-3">
+    <svg viewBox="0 0 120 80" width="140" aria-hidden="true">
+      <rect x="14" y="62" width="92" height="7" rx="3.5" fill="var(--surface2)" />
+      <path d="M20 58V20c14-5 28-4 40 3v35c-12-7-26-8-40-4z" fill="var(--art)" />
+      <path d="M100 58V20c-14-5-28-4-40 3v35c12-7 26-8 40-4z" fill="#E9B000" />
+      <path d="M60 23v35" stroke="#F7F5EF" strokeWidth="2" />
+      <path d="M28 30q10-2 20 2M28 38q10-2 20 2" stroke="#F7F5EF" strokeOpacity=".5" strokeWidth="2" strokeLinecap="round" fill="none" />
+    </svg>
+    <h3 className="h-display text-lg font-bold">{title}</h3>
+    <p className="t-muted text-sm max-w-sm">{text}</p>
+    {action}
+  </div>
+);
+const Seg = ({ value, onChange, options, label }) => (
+  <div className="seg" role="group" aria-label={label}>
+    {options.map(([k, l]) => <button key={k} onClick={() => onChange(k)} aria-pressed={value === k} className={value === k ? 'on' : ''}>{l}</button>)}
+  </div>
+);
+const Section = ({ n, title, children }) => (
+  <section className="card p-5 space-y-4">
+    <h2 className="h-display text-base font-bold flex items-center gap-2"><span className="step">{n}</span>{title}</h2>
+    {children}
+  </section>
+);
+const Notice = ({ text }) => <p className={'notice ' + (/^(Không|Hãy|Chưa|Cần)/.test(text) ? 'notice-err' : 'notice-ok')} role="status">{text}</p>;
+const PageHead = ({ title, text }) => <div><h1 className="h-display text-3xl font-extrabold t-brand">{title}</h1><p className="t-muted mt-1 max-w-2xl">{text}</p></div>;
+function SecretInput({ label, value, onChange }) {
+  const [show, setShow] = useState(false);
+  return (
+    <Field label={label}>
+      <div className="relative">
+        <input type={show ? 'text' : 'password'} autoComplete="off" spellCheck="false" className="input !pr-12" value={value} onChange={onChange} />
+        <button type="button" className="btn btn-ghost btn-icon absolute right-0.5 top-1/2 -translate-y-1/2" onClick={() => setShow(!show)} aria-label={show ? 'Ẩn giá trị' : 'Hiện giá trị'} title={show ? 'Ẩn' : 'Hiện'}><Icon n={show ? 'eyeoff' : 'eye'} /></button>
+      </div>
+    </Field>
+  );
+}
+function Field({ label, hint, children }) {
+  return <label className="block"><span className="field-label">{label}</span>{children}{hint && <span className="text-xs t-muted mt-1 block">{hint}</span>}</label>;
 }
 
 const lookupCache = {};
@@ -158,121 +266,118 @@ function Detail({ w, onClose, onEdit, emph }) {
   const e = encodeURIComponent(term);
   const links = [
     ['RAE (DLE)', `https://dle.rae.es/${e}`],
-    ['WordReference – định nghĩa', `https://www.wordreference.com/definicion/${e}`],
+    ['WordReference', `https://www.wordreference.com/definicion/${e}`],
     ['DeepL ES→VI', `https://www.deepl.com/translator#es/vi/${e}`],
     ['WordReference ES–EN', `https://www.wordreference.com/es/en/translation.asp?spen=${e}`],
-    ['Google Dịch ES→VI', `https://translate.google.com/?sl=es&tl=vi&op=translate&text=${e}`],
+    ['Google Dịch', `https://translate.google.com/?sl=es&tl=vi&op=translate&text=${e}`],
     ['Wiktionary', `https://es.wiktionary.org/wiki/${e}`],
   ];
   const big = emph === 'vi' ? w.vi : w.es, small = emph === 'vi' ? w.es : w.vi;
   const forms = [w.es, ...w.family.filter(f => f !== w.es)];
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
-      <div className="bg-white dark:bg-[#18223A] w-full sm:max-w-xl max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl p-5 space-y-4" role="dialog" aria-modal="true" onClick={ev => ev.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-6 modal-bg" onClick={onClose}>
+      <div className="sheet card w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto !rounded-b-none sm:!rounded-b-2xl p-5 sm:p-6 space-y-5" role="dialog" aria-modal="true" aria-label={'Chi tiết ' + w.es} onClick={ev => ev.stopPropagation()}>
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-3xl font-extrabold text-[#14213D] dark:text-[#E9B000] leading-tight">{big}</h2>
-            <p className="text-lg text-slate-600 dark:text-slate-300 mt-1">{small}</p>
+          <div className="min-w-0">
+            <div className="flex flex-wrap gap-2 mb-2"><span className="badge badge-gold">{w.topic}</span><span className="badge">{w.pos}</span></div>
+            <h2 className={'h-display text-3xl leading-tight t-brand ' + (emph === 'es' ? 'font-bold' : 'font-semibold')}>{big}</h2>
+            <p className={'text-lg t-muted mt-1 ' + (emph === 'es' ? 'font-medium' : 'font-semibold')}>{small}</p>
           </div>
           <div className="flex gap-1 shrink-0">
-            <button className={btnSoft + ' !px-3'} onClick={() => speak(w.es)} aria-label="Nghe phát âm">🔊</button>
-            <button className={btnSoft + ' !px-3'} onClick={onClose} aria-label="Đóng">✕</button>
+            <button className="btn btn-secondary btn-icon" onClick={() => speak(w.es)} aria-label="Nghe phát âm" title="Nghe phát âm"><Icon n="vol" /></button>
+            <button className="btn btn-secondary btn-icon" onClick={onClose} aria-label="Đóng" title="Đóng"><Icon n="x" /></button>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2 text-xs">
-          <span className="px-2 py-1 rounded-full bg-slate-200 dark:bg-[#222E4C]">Từ loại: {w.pos}</span>
-          <span className="px-2 py-1 rounded-full border border-[#E9B000]">Chủ đề: {w.topic}</span>
-        </div>
-        {(w.exEs || w.exVi) && <div className="text-sm border-l-4 border-[#E9B000] pl-3"><p className="italic">{w.exEs}</p><p className="text-slate-500 dark:text-slate-400">{w.exVi}</p>
-          <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-            {w.exEs && <a className="underline" href={`https://www.deepl.com/translator#es/vi/${encodeURIComponent(w.exEs)}`} target="_blank" rel="noopener noreferrer">Đối chiếu ES→VI bằng DeepL ↗</a>}
-            {w.exVi && <a className="underline" href={`https://www.deepl.com/translator#vi/es/${encodeURIComponent(w.exVi)}`} target="_blank" rel="noopener noreferrer">Đối chiếu VI→ES bằng DeepL ↗</a>}
+        {(w.exEs || w.exVi) && <div className="rounded-xl p-4 border-l-4 border-[#E9B000]" style={{ background: 'var(--surface2)' }}>
+          <p className="font-medium italic">{w.exEs}</p><p className="t-muted mt-1">{w.exVi}</p>
+          <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            {w.exEs && <a className="underline t-muted" href={`https://www.deepl.com/translator#es/vi/${encodeURIComponent(w.exEs)}`} target="_blank" rel="noopener noreferrer">Đối chiếu ES→VI bằng DeepL ↗</a>}
+            {w.exVi && <a className="underline t-muted" href={`https://www.deepl.com/translator#vi/es/${encodeURIComponent(w.exVi)}`} target="_blank" rel="noopener noreferrer">Đối chiếu VI→ES bằng DeepL ↗</a>}
           </p></div>}
-        {w.note && <p className="text-sm text-slate-600 dark:text-slate-300">📌 {w.note}</p>}
+        {w.note && <div><p className="field-label">Ghi chú chuyên ngành</p><p className="text-sm">{w.note}</p></div>}
         <div>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Tra nhanh từ gốc và các dạng từ (bấm để xem định nghĩa)</p>
+          <p className="field-label">Họ từ — bấm một dạng từ để xem định nghĩa</p>
           <div className="flex flex-wrap gap-2">
-            {forms.map(f => <button key={f} onClick={() => go(f)} aria-pressed={term === f}
-              className={'text-sm px-3 py-1 rounded-full border ' + (term === f ? 'bg-[#E9B000] text-[#14213D] border-[#E9B000] font-semibold' : 'border-slate-300 dark:border-slate-600')}>{f}</button>)}
+            {forms.map(f => <button key={f} onClick={() => go(f)} aria-pressed={term === f} className={'chip ' + (term === f ? 'on' : '')}>{f}</button>)}
           </div>
-          <div className="flex gap-2 mt-2">
-            <input className={inputCls} value={box} onChange={ev => setBox(ev.target.value)} onKeyDown={ev => ev.key === 'Enter' && go(box)} placeholder="Tra từ khác…" />
-            <button className={btnSoft} onClick={() => go(box)}>Tra</button>
+          <div className="flex gap-2 mt-3">
+            <input className="input" value={box} onChange={ev => setBox(ev.target.value)} onKeyDown={ev => ev.key === 'Enter' && go(box)} placeholder="Tra từ khác…" aria-label="Tra từ khác" />
+            <button className="btn btn-secondary" onClick={() => go(box)}>Tra</button>
           </div>
         </div>
-        <div className="rounded-lg bg-slate-100 dark:bg-[#0F1626] p-3 text-sm">
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Định nghĩa “{term}” — Wiktionary (tiếng Tây Ban Nha)</p>
-          {st.loading ? <p className="text-slate-500">Đang tra…</p> : st.err ? <p className="text-slate-500">{st.err}</p> :
-            <pre className="whitespace-pre-wrap font-sans max-h-64 overflow-y-auto">{st.text}</pre>}
+        <div className="rounded-xl p-4 text-sm" style={{ background: 'var(--surface2)' }}>
+          <p className="field-label">Định nghĩa “{term}” · Wiktionary tiếng Tây Ban Nha</p>
+          {st.loading ? <div className="space-y-2" aria-busy="true"><div className="skeleton h-4 w-3/4" /><div className="skeleton h-4 w-full" /><div className="skeleton h-4 w-2/3" /></div>
+            : st.err ? <p className="t-muted">{st.err}</p> : <pre className="whitespace-pre-wrap font-[inherit] max-h-60 overflow-y-auto">{st.text}</pre>}
         </div>
         <div>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Mở từ điển khác cho “{term}”</p>
-          <div className="flex flex-wrap gap-2">
-            {links.map(([l, u]) => <a key={l} href={u} target="_blank" rel="noopener noreferrer" className={btnSoft + ' !py-1 !px-3 inline-block'}>{l} ↗</a>)}
-          </div>
+          <p className="field-label">Mở từ điển khác cho “{term}”</p>
+          <div className="flex flex-wrap gap-2">{links.map(([l, u]) => <a key={l} href={u} target="_blank" rel="noopener noreferrer" className="btn btn-secondary !min-h-[34px] !py-1 !px-3 !text-xs">{l}<Icon n="ext" s={13} /></a>)}</div>
         </div>
-        <div className="flex gap-2"><button className={btnMain} onClick={() => onEdit(w)}>Sửa thuật ngữ</button><button className={btnSoft} onClick={onClose}>Đóng</button></div>
+        <div className="flex gap-2 justify-end"><button className="btn btn-secondary" onClick={onClose}>Đóng</button><button className="btn btn-primary" onClick={() => onEdit(w)}><Icon n="edit" s={16} />Sửa thuật ngữ</button></div>
       </div>
     </div>
   );
 }
 
-function Library({ words, onEdit, onDelete, topics, q, setQ, topic, setTopic, emph, setEmph }) {
+function Library({ words, onEdit, onDelete, onAdd, topics, q, setQ, topic, setTopic, emph, setEmph }) {
   const [open, setOpen] = useState(null);
+  const [pos, setPos] = useState('');
   const list = useMemo(() => {
     const n = norm(q);
-    return words.filter(w => (!topic || w.topic === topic) &&
+    return words.filter(w => (!topic || w.topic === topic) && (!pos || w.pos === pos) &&
       (!n || norm(w.es).includes(n) || norm(w.vi).includes(n) || w.family.some(f => norm(f).includes(n))));
-  }, [words, q, topic]);
+  }, [words, q, topic, pos]);
   const openWord = open ? words.find(w => w.id === open) : null;
   const stop = fn => ev => { ev.stopPropagation(); fn(); };
+  const stats = useMemo(() => [
+    ['Thuật ngữ', words.length],
+    ['Chủ đề đang dùng', new Set(words.map(w => w.topic).filter(Boolean)).size],
+    ['Có câu ví dụ', words.filter(w => w.exEs || w.exVi).length],
+    ['Dạng từ trong họ từ', words.reduce((a, w) => a + w.family.length, 0)]
+  ], [words]);
+  const filtered = q || topic || pos;
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row gap-2 mb-3">
-        <input className={inputCls} placeholder="Tìm nhanh ES hoặc VI (không cần dấu)…" value={q} onChange={e => setQ(e.target.value)} />
-        <select className={inputCls + ' sm:w-48'} value={topic} onChange={e => setTopic(e.target.value)}>
-          <option value="">Mọi chủ đề</option>
-          {topics.map(t => <option key={t}>{t}</option>)}
-        </select>
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-        <p className="text-xs text-slate-500">{list.length} / {words.length} thuật ngữ · Bấm vào thẻ để xem chi tiết</p>
-        <div className="inline-flex rounded-lg overflow-hidden border border-slate-300 dark:border-slate-600 text-xs font-semibold" role="group" aria-label="Chọn ngôn ngữ nổi bật">
-          {[['vi', 'Nổi bật: Tiếng Việt'], ['es', 'Nổi bật: Tây Ban Nha']].map(([k, l]) =>
-            <button key={k} onClick={() => setEmph(k)} aria-pressed={emph === k}
-              className={'px-3 py-1.5 ' + (emph === k ? 'bg-[#E9B000] text-[#14213D]' : 'bg-white dark:bg-[#18223A]')}>{l}</button>)}
+    <div className="space-y-5">
+      <PageHead title="Thư viện thuật ngữ" text="Tra cứu, lọc và ôn lại kho thuật ngữ biên phiên dịch của bạn. Bấm vào một thẻ để xem chi tiết và tra từ điển." />
+      {words.length > 0 && <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {stats.map(([l, v]) => <div key={l} className="card p-4"><p className="h-display text-3xl font-extrabold t-brand tabular-nums">{v}</p><p className="text-xs t-muted mt-1">{l}</p></div>)}</div>}
+      <div className="card p-3 sm:p-4 space-y-3">
+        <div className="relative">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 t-muted pointer-events-none"><Icon n="search" /></span>
+          <input className="input !pl-11 !min-h-[48px] !text-base" placeholder="Tìm nhanh tiếng Tây Ban Nha hoặc tiếng Việt (không cần dấu)…" aria-label="Tìm thuật ngữ" value={q} onChange={e => setQ(e.target.value)} />
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <select className="input !w-auto" aria-label="Lọc theo chủ đề" value={topic} onChange={e => setTopic(e.target.value)}><option value="">Mọi chủ đề</option>{topics.map(t => <option key={t}>{t}</option>)}</select>
+          <select className="input !w-auto" aria-label="Lọc theo từ loại" value={pos} onChange={e => setPos(e.target.value)}><option value="">Mọi từ loại</option>{POS.map(t => <option key={t}>{t}</option>)}</select>
+          {filtered && <button className="btn btn-ghost" onClick={() => { setQ(''); setTopic(''); setPos(''); }}>Xóa bộ lọc</button>}
+          <div className="sm:ml-auto"><Seg label="Chọn ngôn ngữ nổi bật" value={emph} onChange={setEmph} options={[['vi', 'Nổi bật: Việt'], ['es', 'Nổi bật: Tây Ban Nha']]} /></div>
         </div>
       </div>
-      {list.length === 0 && <p className="py-12 text-center text-slate-500">Chưa có thuật ngữ nào khớp. Sang tab “Thêm từ” để tạo mục đầu tiên hoặc nhập file JSON.</p>}
-      <div className="grid gap-3 md:grid-cols-2">
-        {list.map(w => {
-          const big = emph === 'vi' ? w.vi : w.es, small = emph === 'vi' ? w.es : w.vi;
-          return (
-            <article key={w.id} role="button" tabIndex="0" onClick={() => setOpen(w.id)}
-              onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setOpen(w.id))}
-              className="cursor-pointer rounded-xl bg-white dark:bg-[#18223A] border border-slate-200 dark:border-slate-700 hover:border-[#E9B000] p-4">
-              <div className="flex items-start justify-between gap-2">
+      <p className="text-xs t-muted">{list.length} / {words.length} thuật ngữ</p>
+      {words.length === 0 ? <EmptyArt title="Thư viện còn trống" text="Thêm thuật ngữ đầu tiên, nhập file JSON hoặc đồng bộ từ vựng ở tab Cài đặt." action={<button className="btn btn-primary mt-2" onClick={onAdd}><Icon n="plus" s={16} />Thêm thuật ngữ</button>} />
+        : list.length === 0 ? <EmptyArt title="Không có thuật ngữ phù hợp" text="Thử từ khóa khác hoặc bỏ bớt bộ lọc." action={<button className="btn btn-secondary mt-2" onClick={() => { setQ(''); setTopic(''); setPos(''); }}>Xóa bộ lọc</button>} />
+        : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {list.map(w => {
+            const big = emph === 'vi' ? w.vi : w.es, small = emph === 'vi' ? w.es : w.vi;
+            return (
+              <article key={w.id} role="button" tabIndex="0" onClick={() => setOpen(w.id)} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setOpen(w.id))} className="card lift p-4 cursor-pointer flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-2"><span className="badge badge-gold">{w.topic}</span><span className="badge">{w.pos}</span></div>
                 <div>
-                  <h3 className="text-2xl font-extrabold text-[#14213D] dark:text-[#E9B000] leading-tight">{big}</h3>
-                  <p className="text-sm mt-1 text-slate-600 dark:text-slate-300">{small}</p>
+                  <h3 className={'h-display text-2xl leading-tight t-brand ' + (emph === 'es' ? 'font-bold' : 'font-medium')}>{big}</h3>
+                  <p className={'mt-1 t-muted ' + (emph === 'es' ? 'font-medium' : 'font-semibold')}>{small}</p>
                 </div>
-                <div className="flex flex-col items-end gap-1 text-xs">
-                  <span className="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-[#222E4C]">{w.pos}</span>
-                  <span className="px-2 py-0.5 rounded-full border border-[#E9B000]">{w.topic}</span>
-                  <button onClick={stop(() => speak(w.es))} title="Nghe phát âm" aria-label="Nghe phát âm" className="text-base">🔊</button>
+                {w.family.length > 0 && <div className="flex flex-wrap gap-1.5">{w.family.slice(0, 4).map(f => <span key={f} className="chip !text-xs">{f}</span>)}{w.family.length > 4 && <span className="chip !text-xs">+{w.family.length - 4}</span>}</div>}
+                {(w.exEs || w.exVi) && <div className="text-sm border-l-4 border-[#E9B000] pl-3"><p className="italic line-clamp-2">{w.exEs}</p><p className="t-muted line-clamp-2">{w.exVi}</p></div>}
+                <div className="mt-auto pt-2 flex gap-1 border-t" style={{ borderColor: 'var(--border)' }}>
+                  <button className="btn btn-ghost btn-icon" onClick={stop(() => speak(w.es))} aria-label="Nghe phát âm" title="Nghe phát âm"><Icon n="vol" /></button>
+                  <button className="btn btn-ghost btn-icon" onClick={stop(() => onEdit(w))} aria-label="Sửa" title="Sửa"><Icon n="edit" /></button>
+                  <button className="btn btn-ghost btn-icon" onClick={stop(() => confirm('Xóa thuật ngữ “' + w.es + '”?') && onDelete(w.id))} aria-label="Xóa" title="Xóa"><Icon n="trash" /></button>
                 </div>
-              </div>
-              {w.family.length > 0 && <div className="mt-2 flex flex-wrap gap-1">{w.family.map(f => <span key={f} className="text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-[#0F1626]">{f}</span>)}</div>}
-              {(w.exEs || w.exVi) && <div className="mt-3 text-sm border-l-4 border-[#E9B000] pl-3"><p className="italic">{w.exEs}</p><p className="text-slate-500 dark:text-slate-400">{w.exVi}</p></div>}
-              {w.note && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">📌 {w.note}</p>}
-              <div className="mt-3 flex gap-2">
-                <button className={btnSoft + ' !py-1 !px-3'} onClick={stop(() => onEdit(w))}>Sửa</button>
-                <button className={btnSoft + ' !py-1 !px-3'} onClick={stop(() => confirm('Xóa thuật ngữ “' + w.es + '”?') && onDelete(w.id))}>Xóa</button>
-              </div>
-            </article>
-          );
-        })}
-      </div>
+              </article>
+            );
+          })}
+        </div>}
       {openWord && <Detail key={openWord.id} w={openWord} emph={emph} onClose={() => setOpen(null)} onEdit={onEdit} />}
     </div>
   );
@@ -324,34 +429,46 @@ function AddForm({ initial, onSave, onCancel, topics, settings }) {
   };
 
   return (
-    <div className="max-w-3xl mx-auto rounded-xl bg-white dark:bg-[#18223A] border border-slate-200 dark:border-slate-700 p-5 space-y-4">
-      <h2 className="text-xl font-extrabold">{initial ? 'Sửa thuật ngữ' : 'Thêm thuật ngữ'}</h2>
-      <div className="grid sm:grid-cols-2 gap-3">
-        <Field label="Từ / cụm từ tiếng Tây Ban Nha *"><input className={inputCls} value={f.es} onChange={e => set('es', e.target.value)} placeholder="gobernar" /></Field>
-        <Field label="Nghĩa tiếng Việt *"><input className={inputCls + ' !text-lg !font-bold'} value={f.vi} onChange={e => set('vi', e.target.value)} placeholder="cai trị, điều hành" /></Field>
-        <Field label="Từ loại"><select className={inputCls} value={f.pos} onChange={e => set('pos', e.target.value)}>{POS.map(p => <option key={p}>{p}</option>)}</select></Field>
-        <Field label="Chủ đề (chọn hoặc gõ chủ đề mới)">
-          <input className={inputCls} list="topics" value={f.topic} onChange={e => set('topic', e.target.value)} />
-          <datalist id="topics">{topics.map(t => <option key={t} value={t} />)}</datalist>
-        </Field>
-      </div>
-      <button className={btnMain} disabled={busy} onClick={analyze}>{busy ? 'Đang phân tích…' : '✨ Tự động phân tích bằng AI'}</button>
-      <Field label="Họ từ (Word Family) — gõ rồi nhấn Enter hoặc “Thêm”">
-        <div className="flex gap-2">
-          <input className={inputCls} value={fam} onChange={e => setFam(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addFam())} placeholder="gobierno" />
-          <button type="button" className={btnSoft} onClick={addFam}>Thêm</button>
+    <div className="max-w-3xl mx-auto space-y-5">
+      <PageHead title={initial ? 'Sửa thuật ngữ' : 'Thêm thuật ngữ'} text="Nhập thủ công hoặc để AI điền sẵn, rồi kiểm tra lại trước khi lưu." />
+      <Section n="A" title="Thông tin cơ bản">
+        <div className="grid sm:grid-cols-2 gap-4">
+          <Field label="Từ / cụm từ tiếng Tây Ban Nha *"><input className="input !font-semibold" value={f.es} onChange={e => set('es', e.target.value)} placeholder="gobernar" /></Field>
+          <Field label="Nghĩa tiếng Việt *"><input className="input !font-medium" value={f.vi} onChange={e => set('vi', e.target.value)} placeholder="cai trị, điều hành" /></Field>
+          <Field label="Từ loại"><select className="input" value={f.pos} onChange={e => set('pos', e.target.value)}>{POS.map(p => <option key={p}>{p}</option>)}</select></Field>
+          <Field label="Chủ đề (chọn hoặc gõ chủ đề mới)">
+            <input className="input" list="topics" value={f.topic} onChange={e => set('topic', e.target.value)} />
+            <datalist id="topics">{topics.map(t => <option key={t} value={t} />)}</datalist>
+          </Field>
         </div>
-      </Field>
-      {f.family.length > 0 && <div className="flex flex-wrap gap-2">{f.family.map(x =>
-        <span key={x} className="text-sm px-2 py-1 rounded bg-slate-100 dark:bg-[#0F1626]">{x}
-          <button className="ml-2 text-slate-500" aria-label={'Bỏ ' + x} onClick={() => set('family', f.family.filter(y => y !== x))}>×</button></span>)}</div>}
-      <div className="grid sm:grid-cols-2 gap-3">
-        <Field label="Câu ví dụ (ES)"><textarea rows="2" className={inputCls} value={f.exEs} onChange={e => set('exEs', e.target.value)} /></Field>
-        <Field label="Câu ví dụ (VI)"><textarea rows="2" className={inputCls} value={f.exVi} onChange={e => set('exVi', e.target.value)} /></Field>
+      </Section>
+      <section className="card ai-card p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="flex-1"><h2 className="h-display text-base font-bold flex items-center gap-2"><Icon n="sparkles" />Phân tích bằng AI</h2>
+          <p className="text-sm t-muted mt-1">Gemini điền nghĩa tiếng Việt, từ loại, họ từ, câu ví dụ song ngữ và ghi chú từ từ tiếng Tây Ban Nha bạn đã nhập.</p></div>
+        <button className="btn btn-primary !min-h-[48px] !px-6" disabled={busy} onClick={analyze}>{busy ? <><span className="spin" />Đang phân tích…</> : <><Icon n="sparkles" s={16} />Phân tích bằng AI</>}</button>
+      </section>
+      <Section n="B" title="Họ từ">
+        <div className="flex gap-2">
+          <input className="input" aria-label="Thêm dạng từ" value={fam} onChange={e => setFam(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addFam())} placeholder="gobierno, gubernamental… (Enter để thêm)" />
+          <button type="button" className="btn btn-secondary" onClick={addFam}><Icon n="plus" s={16} />Thêm</button>
+        </div>
+        {f.family.length > 0 ? <div className="flex flex-wrap gap-2">{f.family.map(x => <span key={x} className="chip">{x}<button type="button" className="ml-1 t-muted hover:text-[var(--err)]" aria-label={'Bỏ ' + x} onClick={() => set('family', f.family.filter(y => y !== x))}><Icon n="x" s={14} /></button></span>)}</div>
+          : <p className="text-xs t-muted">Chưa có dạng từ nào.</p>}
+      </Section>
+      <Section n="C" title="Câu ví dụ">
+        <div className="grid sm:grid-cols-2 gap-4">
+          <Field label="Tiếng Tây Ban Nha"><textarea rows="3" className="input" value={f.exEs} onChange={e => set('exEs', e.target.value)} /></Field>
+          <Field label="Bản dịch tiếng Việt"><textarea rows="3" className="input" value={f.exVi} onChange={e => set('exVi', e.target.value)} /></Field>
+        </div>
+      </Section>
+      <Section n="D" title="Ghi chú chuyên ngành">
+        <textarea rows="3" aria-label="Ghi chú chuyên ngành" className="input" value={f.note} onChange={e => set('note', e.target.value)} placeholder="Collocations, false friends, ngữ cảnh sử dụng…" />
+      </Section>
+      {msg && <Notice text={msg} />}
+      <div className="card p-3 flex gap-2 justify-end sticky bottom-20 md:bottom-4 z-30">
+        {onCancel && <button className="btn btn-secondary" onClick={onCancel}>Hủy</button>}
+        <button className="btn btn-primary !px-6" onClick={submit}><Icon n="check" s={16} />Lưu thuật ngữ</button>
       </div>
-      <Field label="Ghi chú chuyên ngành (collocations, false friends…)"><textarea rows="2" className={inputCls} value={f.note} onChange={e => set('note', e.target.value)} /></Field>
-      {msg && <p className="text-sm text-[#b88700] dark:text-[#E9B000]" role="status">{msg}</p>}
-      <div className="flex gap-2"><button className={btnMain} onClick={submit}>Lưu thuật ngữ</button>{onCancel && <button className={btnSoft} onClick={onCancel}>Hủy</button>}</div>
     </div>
   );
 }
@@ -359,7 +476,7 @@ function AddForm({ initial, onSave, onCancel, topics, settings }) {
 const shuffle = a => { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
 
 function TopicPick({ topics, topic, setTopic }) {
-  return <select className={inputCls + ' !w-auto'} value={topic} onChange={e => setTopic(e.target.value)}>
+  return <select className="input !w-auto" aria-label="Lọc theo chủ đề" value={topic} onChange={e => setTopic(e.target.value)}>
     <option value="">Mọi chủ đề</option>{topics.map(t => <option key={t}>{t}</option>)}</select>;
 }
 
@@ -372,38 +489,44 @@ function Cards({ words, topics }) {
   useEffect(() => { setDeck(words.filter(w => !topic || w.topic === topic)); setI(0); setFlip(false); }, [words, topic]);
   const w = deck[i];
   const go = d => { setFlip(false); setTimeout(() => setI(x => (x + d + deck.length) % deck.length), 120); };
-  const front = w && (dir === 'es-vi' ? { big: w.es, sub: 'Biên dịch ES → VI' } : { big: w.vi, sub: 'Phiên dịch VI → ES' });
-  const back = w && (dir === 'es-vi' ? w.vi : w.es);
+  useEffect(() => {
+    const h = e => {
+      if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName) || !deck.length) return;
+      if (e.key === 'ArrowRight') go(1); else if (e.key === 'ArrowLeft') go(-1);
+    };
+    window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h);
+  });
+  const esFirst = dir === 'es-vi';
+  const pct = deck.length ? Math.round((i + 1) / deck.length * 100) : 0;
   return (
-    <div className="max-w-xl mx-auto">
-      <div className="flex flex-wrap gap-2 mb-4 items-center">
-        <button className={dir === 'es-vi' ? btnMain : btnSoft} onClick={() => setDir('es-vi')}>Biên dịch ES → VI</button>
-        <button className={dir === 'vi-es' ? btnMain : btnSoft} onClick={() => setDir('vi-es')}>Phiên dịch VI → ES</button>
+    <div className="max-w-2xl mx-auto space-y-5">
+      <PageHead title="Flashcard" text="Lật thẻ để kiểm tra trí nhớ. Dùng phím ← → để chuyển thẻ, phím Enter hoặc Space để lật." />
+      <div className="flex flex-wrap gap-2 items-center">
+        <Seg label="Hướng dịch" value={dir} onChange={setDir} options={[['es-vi', 'Biên dịch ES → VI'], ['vi-es', 'Phiên dịch VI → ES']]} />
         <TopicPick topics={topics} topic={topic} setTopic={setTopic} />
       </div>
-      {!w ? <p className="py-12 text-center text-slate-500">Chưa có thẻ nào trong chủ đề này.</p> : <>
-        <div className="flip cursor-pointer" onClick={() => setFlip(f => !f)} role="button" tabIndex="0" onKeyDown={e => (e.key === ' ' || e.key === 'Enter') && (e.preventDefault(), setFlip(f => !f))} aria-label="Lật thẻ">
-          <div className={'flip-inner h-72 ' + (flip ? 'on' : '')}>
-            <div className="face absolute inset-0 rounded-2xl bg-white dark:bg-[#18223A] border-2 border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center p-6 text-center">
-              <p className="text-xs text-slate-500 mb-3">{front.sub} · {w.topic}</p>
-              <p className="text-4xl font-extrabold">{front.big}</p>
-              <p className="text-xs text-slate-400 mt-6">Nhấn để lật</p>
+      {!w ? <EmptyArt title="Chưa có thẻ để học" text="Thêm thuật ngữ vào thư viện (hoặc chọn chủ đề khác) để bắt đầu luyện flashcard." /> : <>
+        <div><div className="flex justify-between text-xs t-muted mb-2"><span>Thẻ {i + 1} / {deck.length}</span><span>{pct}%</span></div><div className="bar" role="progressbar" aria-valuenow={pct} aria-valuemin="0" aria-valuemax="100"><i style={{ width: pct + '%' }} /></div></div>
+        <div className="flip cursor-pointer" onClick={() => setFlip(f => !f)} role="button" tabIndex="0" aria-label="Lật thẻ" onKeyDown={e => (e.key === ' ' || e.key === 'Enter') && (e.preventDefault(), setFlip(f => !f))}>
+          <div className={'flip-inner h-80 ' + (flip ? 'on' : '')}>
+            <div className="face card absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+              <p className="text-xs tracking-widest uppercase t-muted">{esFirst ? 'Tiếng Tây Ban Nha' : 'Tiếng Việt'} · {w.topic}</p>
+              <p className={'h-display text-4xl sm:text-5xl t-brand mt-5 ' + (esFirst ? 'font-bold' : 'font-medium')}>{esFirst ? w.es : w.vi}</p>
+              {esFirst && <button className="btn btn-secondary btn-icon mt-5" onClick={e => { e.stopPropagation(); speak(w.es); }} aria-label="Nghe phát âm" title="Nghe phát âm"><Icon n="vol" /></button>}
+              <p className="text-xs t-muted mt-5">Nhấn để lật</p>
             </div>
-            <div className="face back rounded-2xl bg-[#14213D] text-white border-2 border-[#E9B000] flex flex-col items-center justify-center p-6 text-center">
-              <p className="text-4xl font-extrabold text-[#E9B000]">{back}</p>
-              <p className="text-xs mt-2 opacity-70">{w.pos}</p>
-              {w.exEs && <p className="mt-4 text-sm italic opacity-90">{w.exEs}<br /><span className="not-italic opacity-60">{w.exVi}</span></p>}
+            <div className="face back rounded-2xl flex flex-col items-center justify-center p-6 text-center" style={{ background: 'var(--face)', color: '#F7F5EF', border: '2px solid #E9B000' }}>
+              <p className={'h-display text-4xl sm:text-5xl ' + (esFirst ? 'font-medium' : 'font-bold')} style={{ color: '#E9B000' }}>{esFirst ? w.vi : w.es}</p>
+              <p className="text-xs mt-3 opacity-70">{w.pos}</p>
+              {w.exEs && <p className="mt-5 text-sm italic opacity-90 max-w-md">{w.exEs}<br /><span className="not-italic opacity-70">{w.exVi}</span></p>}
             </div>
           </div>
         </div>
-        <div className="flex justify-between items-center mt-4">
-          <button className={btnSoft} onClick={() => go(-1)}>Trước</button>
-          <span className="text-sm text-slate-500">{i + 1} / {deck.length}</span>
-          <div className="flex gap-1">
-            <button className={btnSoft + ' !px-3'} title="Xáo trộn thứ tự thẻ" aria-label="Xáo trộn thứ tự thẻ" onClick={() => { setDeck(shuffle(deck)); setI(0); setFlip(false); }}>
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 3h5v5" /><path d="M4 20 21 3" /><path d="M21 16v5h-5" /><path d="M15 15l6 6" /><path d="M4 4l5 5" /></svg>
-            </button>
-            <button className={btnMain} onClick={() => go(1)}>Sau</button>
+        <div className="flex justify-between items-center">
+          <button className="btn btn-secondary" onClick={() => go(-1)}><Icon n="left" s={16} />Trước</button>
+          <div className="flex gap-2">
+            <button className="btn btn-secondary btn-icon" title="Xáo trộn thứ tự thẻ" aria-label="Xáo trộn thứ tự thẻ" onClick={() => { setDeck(shuffle(deck)); setI(0); setFlip(false); }}><Icon n="shuffle" /></button>
+            <button className="btn btn-primary" onClick={() => go(1)}>Sau<Icon n="right" s={16} /></button>
           </div>
         </div>
       </>}
@@ -433,6 +556,7 @@ const tone = (freq, dur, type, vol, delay = 0) => {
 const tick = n => tone(n % 2 ? 1500 : 1100, 0.05, 'square', 0.06);
 const bell = () => [0, 0.9].forEach(d => { tone(880, 1.4, 'sine', 0.25, d); tone(2430, 1.0, 'sine', 0.1, d); tone(4750, 0.6, 'sine', 0.05, d); });
 
+const SESSION = 10;
 function Drill({ words, topics, sound, setSound }) {
   const [topic, setTopic] = useState('');
   const [dir, setDir] = useState('es-vi');
@@ -440,6 +564,7 @@ function Drill({ words, topics, sound, setSound }) {
   const [cur, setCur] = useState(null);
   const [left, setLeft] = useState(0);
   const [show, setShow] = useState(false);
+  const [done, setDone] = useState(false);
   const [score, setScore] = useState({ ok: 0, no: 0 });
   const soundRef = useRef(sound);
   soundRef.current = sound;
@@ -460,36 +585,62 @@ function Drill({ words, topics, sound, setSound }) {
     }, 1000);
     return () => clearTimeout(t);
   }, [cur, show, left]);
-  const mark = ok => { setScore(s => ok ? { ...s, ok: s.ok + 1 } : { ...s, no: s.no + 1 }); next(); };
+  const answered = score.ok + score.no;
+  const mark = ok => {
+    const sc = ok ? { ...score, ok: score.ok + 1 } : { ...score, no: score.no + 1 };
+    setScore(sc);
+    if (sc.ok + sc.no >= SESSION) { setCur(null); setDone(true); } else next();
+  };
+  const restart = () => { setScore({ ok: 0, no: 0 }); setDone(false); setCur(null); };
   const prompt = cur && (dir === 'es-vi' ? cur.es : cur.vi);
   const answer = cur && (dir === 'es-vi' ? cur.vi : cur.es);
+  const C = 2 * Math.PI * 52;
   return (
-    <div className="max-w-xl mx-auto">
-      <div className="flex flex-wrap gap-2 mb-4 items-center">
-        <button className={dir === 'es-vi' ? btnMain : btnSoft} onClick={() => setDir('es-vi')}>ES → VI</button>
-        <button className={dir === 'vi-es' ? btnMain : btnSoft} onClick={() => setDir('vi-es')}>VI → ES</button>
-        {[3, 5, 10].map(s => <button key={s} className={secs === s ? btnMain : btnSoft} onClick={() => setSecs(s)}>{s}s</button>)}
+    <div className="max-w-2xl mx-auto space-y-5">
+      <PageHead title="Luyện phản xạ" text={`Mỗi phiên gồm ${SESSION} thuật ngữ. Dịch nhẩm hoặc nói to trước khi hết giờ, rồi tự chấm.`} />
+      <div className="card p-3 flex flex-wrap gap-2 items-center">
+        <Seg label="Hướng dịch" value={dir} onChange={setDir} options={[['es-vi', 'ES → VI'], ['vi-es', 'VI → ES']]} />
+        <Seg label="Thời gian" value={secs} onChange={setSecs} options={[[3, '3s'], [5, '5s'], [10, '10s']]} />
         <TopicPick topics={topics} topic={topic} setTopic={setTopic} />
-        <button className={(sound ? btnMain : btnSoft) + ' ml-auto'} aria-pressed={sound} title={sound ? 'Đang bật âm thanh (bấm để tắt)' : 'Đang tắt âm thanh (bấm để bật)'}
-          aria-label={sound ? 'Tắt âm thanh' : 'Bật âm thanh'} onClick={() => { const v = !sound; setSound(v); if (v) { getAudio(); tick(1); } }}>{sound ? '🔊' : '🔇'}</button>
+        <button className={'btn btn-icon ml-auto ' + (sound ? 'btn-primary' : 'btn-secondary')} aria-pressed={sound} aria-label={sound ? 'Tắt âm thanh' : 'Bật âm thanh'} title={sound ? 'Âm thanh: bật' : 'Âm thanh: tắt'}
+          onClick={() => { const v = !sound; setSound(v); if (v) { getAudio(); tick(1); } }}><Icon n={sound ? 'vol' : 'mute'} /></button>
       </div>
-      <div className="rounded-2xl bg-white dark:bg-[#18223A] border-2 border-slate-200 dark:border-slate-700 p-6 text-center min-h-[18rem] flex flex-col items-center justify-center">
-        {!cur ? <>
-          <p className="mb-4 text-slate-500">Dịch nhẩm hoặc nói to trước khi hết giờ, rồi tự chấm.</p>
-          <button className={btnMain} disabled={!pool.length} onClick={next}>Bắt đầu luyện</button>
-          {!pool.length && <p className="mt-3 text-sm text-slate-500">Chưa có thuật ngữ nào để luyện.</p>}
-        </> : <>
-          <div className="w-full h-2 rounded bg-slate-200 dark:bg-[#0F1626] mb-4 overflow-hidden"><div className="h-2 bg-[#E9B000]" style={{ width: show ? '0%' : (left / secs * 100) + '%', transition: 'width 1s linear' }} /></div>
-          <p className="text-5xl font-extrabold tabular-nums mb-3">{show ? '⏱' : left}</p>
-          <p className="text-3xl font-extrabold">{prompt}</p>
-          {show ? <p className="mt-5 text-3xl font-extrabold text-[#b88700] dark:text-[#E9B000]">{answer}</p> :
-            <button className={btnSoft + ' mt-5'} onClick={() => setShow(true)}>Hiện đáp án</button>}
-        </>}
-      </div>
-      {cur && show && <div className="flex gap-2 justify-center mt-4">
-        <button className={btnSoft} onClick={() => mark(false)}>Chưa nhớ</button>
-        <button className={btnMain} onClick={() => mark(true)}>Đã nhớ</button></div>}
-      <p className="text-center text-sm text-slate-500 mt-3">Đã nhớ {score.ok} · Chưa nhớ {score.no}</p>
+      {!pool.length ? <EmptyArt title="Chưa có thuật ngữ để luyện" text="Thêm thuật ngữ vào thư viện (hoặc chọn chủ đề khác) rồi quay lại luyện phản xạ." />
+        : done ? (
+          <div className="card p-8 text-center space-y-4">
+            <p className="text-xs tracking-widest uppercase t-muted">Hoàn thành phiên luyện</p>
+            <p className="h-display text-6xl font-extrabold t-brand">{Math.round(score.ok / SESSION * 100)}%</p>
+            <p className="t-muted">Bạn nhớ {score.ok} / {SESSION} thuật ngữ{score.no > 0 ? `, ${score.no} thuật ngữ cần ôn lại.` : '.'}</p>
+            <button className="btn btn-primary !px-6" onClick={restart}><Icon n="redo" s={16} />Luyện phiên mới</button>
+          </div>
+        ) : !cur ? (
+          <div className="card p-10 text-center space-y-4">
+            <p className="t-muted">Sẵn sàng chưa? Đồng hồ sẽ đếm ngược {secs} giây cho mỗi thuật ngữ.</p>
+            <button className="btn btn-primary !min-h-[48px] !px-8" onClick={next}><Icon n="zap" s={16} />Bắt đầu luyện</button>
+          </div>
+        ) : (
+          <div className="card p-5 sm:p-8 space-y-6">
+            <div>
+              <div className="flex justify-between text-xs t-muted mb-2"><span>Câu {answered + 1} / {SESSION}</span><span>Đã nhớ {score.ok} · Chưa nhớ {score.no}</span></div>
+              <div className="bar" role="progressbar" aria-valuenow={answered} aria-valuemin="0" aria-valuemax={SESSION}><i style={{ width: (answered / SESSION * 100) + '%' }} /></div>
+            </div>
+            <div className="flex flex-col items-center gap-5 text-center">
+              <div className="relative" style={{ width: 120, height: 120 }} aria-live="polite">
+                <svg viewBox="0 0 120 120" width="120" height="120" style={{ transform: 'rotate(-90deg)' }} aria-hidden="true">
+                  <circle cx="60" cy="60" r="52" fill="none" stroke="var(--surface2)" strokeWidth="9" />
+                  <circle className="ring" cx="60" cy="60" r="52" fill="none" stroke={show ? 'var(--err)' : '#E9B000'} strokeWidth="9" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={show ? C : C * (1 - left / secs)} />
+                </svg>
+                <div className="absolute inset-0 grid place-items-center h-display text-4xl font-extrabold tabular-nums t-brand">{show ? <Icon n="clock" s={34} /> : left}</div>
+              </div>
+              <p className={'h-display text-3xl sm:text-4xl t-brand ' + (dir === 'es-vi' ? 'font-bold' : 'font-medium')}>{prompt}</p>
+              {show && <div className="w-full rounded-xl p-4" style={{ background: 'var(--surface2)' }}><p className="field-label">Đáp án</p><p className={'h-display text-3xl t-gold ' + (dir === 'es-vi' ? 'font-medium' : 'font-bold')}>{answer}</p></div>}
+            </div>
+            {show ? <div className="grid grid-cols-2 gap-3">
+              <button className="btn btn-no !min-h-[56px] !text-base" onClick={() => mark(false)}><Icon n="x" />Chưa nhớ</button>
+              <button className="btn btn-ok !min-h-[56px] !text-base" onClick={() => mark(true)}><Icon n="check" />Đã nhớ</button></div>
+              : <button className="btn btn-primary w-full !min-h-[56px] !text-base" onClick={() => setShow(true)}>Hiện đáp án</button>}
+          </div>
+        )}
     </div>
   );
 }
@@ -532,38 +683,39 @@ function Settings({ settings, setSettings, words, setWords, tombs, applyState, o
     r.readAsText(file); e.target.value = '';
   };
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <section className="rounded-xl bg-white dark:bg-[#18223A] border border-slate-200 dark:border-slate-700 p-5 space-y-3">
-        <h2 className="text-xl font-extrabold">Gemini API</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Lấy key miễn phí tại aistudio.google.com. Key chỉ lưu trong trình duyệt của bạn và chỉ gửi tới Google.</p>
-        <Field label="API Key"><input type="password" className={inputCls} value={settings.apiKey} onChange={e => setSettings({ ...settings, apiKey: e.target.value })} autoComplete="off" /></Field>
+    <div className="max-w-3xl mx-auto space-y-5">
+      <PageHead title="Cài đặt" text="Kết nối AI, đồng bộ từ vựng giữa các thiết bị, cài ứng dụng và sao lưu dữ liệu." />
+      <section className="card p-5 space-y-3">
+        <h2 className="h-display text-lg font-bold">Gemini API</h2>
+        <p className="text-sm t-muted">Lấy key miễn phí tại aistudio.google.com. Key chỉ lưu trong trình duyệt của bạn và chỉ gửi tới Google.</p>
+        <SecretInput label="API Key" value={settings.apiKey} onChange={e => setSettings({ ...settings, apiKey: e.target.value })} />
         <Field label="Tên model (đổi nếu Google ngừng hỗ trợ model cũ như gemini-1.5-flash)"><input className={inputCls} value={settings.model} onChange={e => setSettings({ ...settings, model: e.target.value })} /></Field>
       </section>
-      <section className="rounded-xl bg-white dark:bg-[#18223A] border border-slate-200 dark:border-slate-700 p-5 space-y-3">
-        <h2 className="text-xl font-extrabold">Đồng bộ riêng tư giữa các thiết bị (GitHub Gist)</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Từ vựng được lưu trong một Gist bí mật của riêng bạn. Đồng bộ hai chiều, gồm cả việc xóa từ: sửa ở máy nào, máy kia nhận được.</p>
+      <section className="card p-5 space-y-3">
+        <h2 className="h-display text-lg font-bold">Đồng bộ riêng tư giữa các thiết bị (GitHub Gist)</h2>
+        <p className="text-sm t-muted">Từ vựng được lưu trong một Gist bí mật của riêng bạn. Đồng bộ hai chiều, gồm cả việc xóa từ: sửa ở máy nào, máy kia nhận được.</p>
         <details className="text-sm">
           <summary className="cursor-pointer font-semibold">Cách thiết lập (làm một lần)</summary>
-          <ol className="list-decimal ml-5 mt-2 space-y-1 text-slate-600 dark:text-slate-300">
+          <ol className="list-decimal ml-5 mt-2 space-y-1 t-text2">
             <li>Đăng nhập github.com → Settings → Developer settings → Personal access tokens → <b>Tokens (classic)</b> → Generate new token (classic).</li>
             <li>Đặt tên, chọn thời hạn, chỉ tick quyền <b>gist</b>, bấm Generate rồi copy token (chỉ hiện một lần).</li>
             <li>Máy thứ nhất: dán token vào ô bên dưới, bấm <b>Tạo Gist mới</b>. Ô Gist ID sẽ tự điền.</li>
             <li>Máy thứ hai: dán cùng token và cùng Gist ID vào hai ô, rồi bấm <b>Đồng bộ hai chiều ngay</b>.</li>
           </ol>
         </details>
-        <Field label="Token GitHub (quyền gist)"><input type="password" autoComplete="off" className={inputCls} value={settings.gistToken} onChange={e => setSettings({ ...settings, gistToken: e.target.value })} /></Field>
+        <SecretInput label="Token GitHub (quyền gist)" value={settings.gistToken} onChange={e => setSettings({ ...settings, gistToken: e.target.value })} />
         <Field label="Gist ID"><input className={inputCls} value={settings.gistId} onChange={e => setSettings({ ...settings, gistId: e.target.value })} placeholder="Tự điền sau khi tạo Gist" /></Field>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={settings.gistAuto} onChange={e => setSettings({ ...settings, gistAuto: e.target.checked })} /> Tự đồng bộ khi mở ứng dụng, khi quay lại ứng dụng và vài giây sau khi sửa dữ liệu</label>
         <div className="flex flex-wrap gap-2">
           <button className={btnMain} disabled={gistBusy} onClick={() => gistSync(false)}>{gistBusy ? 'Đang đồng bộ…' : '⟳ Đồng bộ hai chiều ngay'}</button>
           <button className={btnSoft} disabled={gistBusy} onClick={() => (!settings.gistId || confirm('Đã có Gist ID. Tạo Gist mới sẽ thay ID hiện tại, các máy khác phải nhập lại ID mới. Tiếp tục?')) && gistCreate()}>Tạo Gist mới</button>
         </div>
-        {gistMsg && <p className="text-sm text-[#b88700] dark:text-[#E9B000]" role="status">{gistMsg}</p>}
-        <p className="text-xs text-slate-500">Token và Gist ID chỉ lưu trong trình duyệt của từng máy. Không chia sẻ link Gist. Nếu mất thiết bị, hãy thu hồi token trên GitHub.</p>
+        {gistMsg && <p className="text-sm t-gold" role="status">{gistMsg}</p>}
+        <p className="text-xs t-muted">Token và Gist ID chỉ lưu trong trình duyệt của từng máy. Không chia sẻ link Gist. Nếu mất thiết bị, hãy thu hồi token trên GitHub.</p>
       </section>
-      <section className="rounded-xl bg-white dark:bg-[#18223A] border border-slate-200 dark:border-slate-700 p-5 space-y-3">
-        <h2 className="text-xl font-extrabold">Mã đồng bộ chuyển một lần (không cần tài khoản)</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Tạo mã trên máy này, gửi cho chính bạn (Zalo, Messenger, ghi chú) rồi dán vào máy kia để gộp. Mã chứa toàn bộ từ vựng nhưng không chứa API Key hay token.</p>
+      <section className="card p-5 space-y-3">
+        <h2 className="h-display text-lg font-bold">Mã đồng bộ chuyển một lần (không cần tài khoản)</h2>
+        <p className="text-sm t-muted">Tạo mã trên máy này, gửi cho chính bạn (Zalo, Messenger, ghi chú) rồi dán vào máy kia để gộp. Mã chứa toàn bộ từ vựng nhưng không chứa API Key hay token.</p>
         <div className="flex flex-wrap gap-2">
           <button className={btnMain} onClick={makeCode}>Tạo mã từ máy này</button>
           {codeOut && <button className={btnSoft} onClick={copyCode}>Sao chép</button>}
@@ -573,33 +725,33 @@ function Settings({ settings, setSettings, words, setWords, tombs, applyState, o
         {codeOut && <textarea readOnly rows="3" className={inputCls + ' font-mono text-xs'} value={codeOut} onFocus={e => e.target.select()} />}
         <Field label="Dán mã từ máy kia để gộp vào máy này"><textarea rows="3" className={inputCls + ' font-mono text-xs'} value={codeIn} onChange={e => setCodeIn(e.target.value)} placeholder="GLO1:..." /></Field>
         <button className={btnSoft} disabled={!codeIn.trim()} onClick={applyCode}>Gộp mã vào máy này</button>
-        {codeMsg && <p className="text-sm text-[#b88700] dark:text-[#E9B000]" role="status">{codeMsg}</p>}
-        <p className="text-xs text-slate-500">Nếu bộ từ lớn mà ứng dụng chat cắt mất mã, hãy dùng nút “Tải file .txt” rồi mở file, copy toàn bộ nội dung.</p>
+        {codeMsg && <p className="text-sm t-gold" role="status">{codeMsg}</p>}
+        <p className="text-xs t-muted">Nếu bộ từ lớn mà ứng dụng chat cắt mất mã, hãy dùng nút “Tải file .txt” rồi mở file, copy toàn bộ nội dung.</p>
       </section>
-      <section className="rounded-xl bg-white dark:bg-[#18223A] border border-slate-200 dark:border-slate-700 p-5 space-y-3">
-        <h2 className="text-xl font-extrabold">Bộ từ chung công khai (vocab.json)</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Giữ một file JSON trên GitHub (mặc định <code>vocab.json</code> cạnh <code>index.html</code>). Mọi thiết bị bấm đồng bộ sẽ kéo các từ mới về. Đồng bộ chỉ thêm hoặc cập nhật từ, không xóa từ.</p>
+      <section className="card p-5 space-y-3">
+        <h2 className="h-display text-lg font-bold">Bộ từ chung công khai (vocab.json)</h2>
+        <p className="text-sm t-muted">Giữ một file JSON trên GitHub (mặc định <code>vocab.json</code> cạnh <code>index.html</code>). Mọi thiết bị bấm đồng bộ sẽ kéo các từ mới về. Đồng bộ chỉ thêm hoặc cập nhật từ, không xóa từ.</p>
         <Field label="Địa chỉ file JSON (đường dẫn tương đối hoặc link raw.githubusercontent.com)"><input className={inputCls} value={settings.syncUrl} onChange={e => setSettings({ ...settings, syncUrl: e.target.value })} placeholder="vocab.json" /></Field>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={settings.autoSync} onChange={e => setSettings({ ...settings, autoSync: e.target.checked })} /> Tự đồng bộ mỗi khi mở ứng dụng</label>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={settings.overwrite} onChange={e => setSettings({ ...settings, overwrite: e.target.checked })} /> Ghi đè nội dung nếu từ đã có (lấy bản trên GitHub làm chuẩn)</label>
         <button className={btnMain} disabled={syncing} onClick={() => onSync(false)}>{syncing ? 'Đang đồng bộ…' : '⟳ Đồng bộ ngay'}</button>
-        {syncMsg && <p className="text-sm text-[#b88700] dark:text-[#E9B000]" role="status">{syncMsg}</p>}
+        {syncMsg && <p className="text-sm t-gold" role="status">{syncMsg}</p>}
       </section>
-      <section className="rounded-xl bg-white dark:bg-[#18223A] border border-slate-200 dark:border-slate-700 p-5 space-y-3">
-        <h2 className="text-xl font-extrabold">Cài đặt thành ứng dụng</h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Android/Chrome/Edge: bấm nút bên dưới (hoặc menu ⋮ → Cài đặt ứng dụng). iPhone/iPad: mở bằng Safari, bấm nút Chia sẻ → Thêm vào MH chính. Sau khi cài, ứng dụng mở toàn màn hình và vẫn dùng được khi mất mạng.</p>
-        {canInstall ? <button className={btnMain} onClick={onInstall}>Cài đặt ứng dụng</button> : <p className="text-sm text-slate-500">Nút cài đặt chỉ hiện khi trình duyệt cho phép (cần mở bằng link https, không phải file trên máy, và chưa cài trước đó).</p>}
+      <section className="card p-5 space-y-3">
+        <h2 className="h-display text-lg font-bold">Cài đặt thành ứng dụng</h2>
+        <p className="text-sm t-muted">Android/Chrome/Edge: bấm nút bên dưới (hoặc menu ⋮ → Cài đặt ứng dụng). iPhone/iPad: mở bằng Safari, bấm nút Chia sẻ → Thêm vào MH chính. Sau khi cài, ứng dụng mở toàn màn hình và vẫn dùng được khi mất mạng.</p>
+        {canInstall ? <button className={btnMain} onClick={onInstall}>Cài đặt ứng dụng</button> : <p className="text-sm t-muted">Nút cài đặt chỉ hiện khi trình duyệt cho phép (cần mở bằng link https, không phải file trên máy, và chưa cài trước đó).</p>}
       </section>
-      <section className="rounded-xl bg-white dark:bg-[#18223A] border border-slate-200 dark:border-slate-700 p-5 space-y-3">
-        <h2 className="text-xl font-extrabold">Sao lưu dữ liệu</h2>
+      <section className="card p-5 space-y-3">
+        <h2 className="h-display text-lg font-bold">Sao lưu dữ liệu</h2>
         <div className="flex flex-wrap gap-2">
           <button className={btnMain} onClick={() => download('glosario-es-vi.json', JSON.stringify(words, null, 2), 'application/json')}>Xuất JSON</button>
           <button className={btnSoft} onClick={toCSV}>Xuất CSV</button>
           <button className={btnSoft} onClick={() => fileRef.current.click()}>Nhập JSON</button>
           <input ref={fileRef} type="file" accept=".json,application/json" className="hidden" onChange={onImport} />
         </div>
-        {msg && <p className="text-sm text-[#b88700] dark:text-[#E9B000]" role="status">{msg}</p>}
-        <p className="text-xs text-slate-500">Mỗi mục JSON gồm: es, vi, pos, topic, family (mảng), exEs, exVi, note. Mục trùng từ tiếng Tây Ban Nha sẽ được bỏ qua.</p>
+        {msg && <p className="text-sm t-gold" role="status">{msg}</p>}
+        <p className="text-xs t-muted">Mỗi mục JSON gồm: es, vi, pos, topic, family (mảng), exEs, exVi, note. Mục trùng từ tiếng Tây Ban Nha sẽ được bỏ qua.</p>
       </section>
     </div>
   );
@@ -740,33 +892,37 @@ function App() {
     }
     if (w.id) { setEditing(null); setTab('lib'); }
   };
-  const tabs = [['lib', 'Thư viện'], ['add', 'Thêm từ'], ['card', 'Flashcard'], ['drill', 'Phản xạ'], ['set', 'Cài đặt']];
+  const tabs = [['lib', 'Thư viện', 'library'], ['add', 'Thêm từ', 'plus'], ['card', 'Flashcard', 'cards'], ['drill', 'Phản xạ', 'zap'], ['set', 'Cài đặt', 'settings']];
+  const toast = gistMsg || syncMsg;
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => { setSyncMsg(''); setGistMsg(''); }, 6000);
+    return () => clearTimeout(t);
+  }, [toast]);
+  const goTab = k => { setTab(k); if (k !== 'add') setEditing(null); window.scrollTo(0, 0); };
+  const busyNow = syncing || gistBusy;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 pb-16">
-      <header className="flex items-center justify-between py-5">
-        <div className="flex items-center gap-3">
-          <img src="icon-192.png" alt="Logo Glosario ES–VI" className="w-12 h-12 rounded-xl shadow" />
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Glosario ES–VI</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Thuật ngữ biên phiên dịch Tây Ban Nha – Việt</p>
+    <div className="min-h-screen">
+      <header className="app-header sticky top-0 z-40">
+        <div className="max-w-[1200px] mx-auto px-4 h-16 flex items-center gap-3">
+          <button onClick={() => goTab('lib')} className="flex items-center gap-3 text-left" aria-label="Về Thư viện">
+            <LogoMark s={38} />
+            <span><span className="block h-display font-extrabold tracking-wide leading-none t-brand">GLOSARIO <span className="t-gold">ES–VI</span></span>
+              <span className="hidden sm:block text-[11px] tracking-wider t-muted mt-1">Terminología · Traducción · Aprendizaje</span></span>
+          </button>
+          <nav className="hidden md:flex ml-6 gap-1" aria-label="Điều hướng chính">
+            {tabs.map(([k, l, ic]) => <button key={k} onClick={() => goTab(k)} aria-current={tab === k ? 'page' : undefined} className={'nav-item ' + (tab === k ? 'on' : '')}><Icon n={ic} s={17} />{l}</button>)}
+          </nav>
+          <div className="ml-auto flex gap-2">
+            <button className="btn btn-secondary btn-icon" disabled={busyNow} onClick={() => (gistReady ? gistSync(false) : syncNow(false))} aria-label="Đồng bộ từ vựng" title="Đồng bộ từ vựng">{busyNow ? <span className="spin" /> : <Icon n="sync" />}</button>
+            <button className="btn btn-secondary btn-icon" onClick={() => setDark(!dark)} aria-label="Đổi giao diện sáng/tối" title={dark ? 'Chế độ sáng' : 'Chế độ tối'}><Icon n={dark ? 'sun' : 'moon'} /></button>
           </div>
         </div>
-        <div className="flex gap-2">
-          <button className={btnSoft} disabled={syncing} onClick={() => (gistReady ? gistSync(false) : syncNow(false))} aria-label="Đồng bộ từ vựng">{(syncing || gistBusy) ? '…' : '⟳ Đồng bộ'}</button>
-          <button className={btnSoft} onClick={() => setDark(!dark)} aria-label="Đổi giao diện sáng/tối">{dark ? '☀️' : '🌙'}</button>
-        </div>
       </header>
-      <nav className="flex gap-1 overflow-x-auto mb-6 border-b border-slate-300 dark:border-slate-700">
-        {tabs.map(([k, l]) => (
-          <button key={k} onClick={() => { setTab(k); if (k !== 'add') setEditing(null); }}
-            className={'px-4 py-2 text-sm font-semibold whitespace-nowrap border-b-4 ' + (tab === k ? 'border-[#E9B000]' : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white')}>{l}</button>
-        ))}
-      </nav>
-      {(syncMsg || gistMsg) && tab !== 'set' && <p className="mb-4 text-sm rounded-lg px-3 py-2 bg-[#E9B000]/20" role="status">{gistMsg || syncMsg} <button className="underline ml-2" onClick={() => { setSyncMsg(''); setGistMsg(''); }}>Đóng</button></p>}
-      <main>
+      <main className="max-w-[1200px] mx-auto px-4 py-6 pb-28 md:pb-12">
         {tab === 'lib' && <Library words={words} topics={topics} q={q} setQ={setQ} topic={topic} setTopic={setTopic} emph={settings.emph} setEmph={v => setSettings(c => ({ ...c, emph: v }))}
-          onEdit={w => { setEditing(w); setTab('add'); }} onDelete={deleteWord} />}
+          onAdd={() => setTab('add')} onEdit={w => { setEditing(w); setTab('add'); }} onDelete={deleteWord} />}
         {tab === 'add' && <AddForm key={editing ? editing.id : 'new'} initial={editing} topics={topics} settings={settings}
           onSave={saveWord} onCancel={editing ? () => { setEditing(null); setTab('lib'); } : null} />}
         {tab === 'card' && <Cards words={words} topics={topics} />}
@@ -775,6 +931,12 @@ function App() {
           tombs={tombs} applyState={applyState} onSync={syncNow} syncing={syncing} syncMsg={syncMsg} canInstall={!!installEvt} onInstall={install}
           gistSync={gistSync} gistCreate={gistCreate} gistBusy={gistBusy} gistMsg={gistMsg} />}
       </main>
+      {toast && tab !== 'set' && <div className="toast" role="status"><span>{toast}</span><button onClick={() => { setSyncMsg(''); setGistMsg(''); }} aria-label="Đóng thông báo"><Icon n="x" s={16} /></button></div>}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bottom-bar" aria-label="Điều hướng chính">
+        <div className="grid grid-cols-5">
+          {tabs.map(([k, l, ic]) => <button key={k} onClick={() => goTab(k)} aria-current={tab === k ? 'page' : undefined} className={'bb-item ' + (tab === k ? 'on' : '')}><Icon n={ic} s={21} />{l}</button>)}
+        </div>
+      </nav>
     </div>
   );
 }
