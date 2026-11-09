@@ -52,7 +52,7 @@ const download = (name, text, type) => {
 };
 
 // Gộp danh sách từ bên ngoài vào danh sách hiện có (so khớp theo từ tiếng Tây Ban Nha, không phân biệt dấu/hoa thường)
-const mergeWords = (current, incoming, overwrite) => {
+const mergeWords = (current, incoming, overwrite, tombs = {}) => {
   const idx = new Map(current.map((w, i) => [norm(w.es), i]));
   const list = [...current];
   let added = 0, updated = 0, skipped = 0;
@@ -61,13 +61,59 @@ const mergeWords = (current, incoming, overwrite) => {
     const clean = { ...emptyForm, ...w, family: Array.isArray(w.family) ? w.family : [] };
     const k = norm(w.es);
     if (idx.has(k)) {
-      if (overwrite) { list[idx.get(k)] = { ...clean, id: list[idx.get(k)].id }; updated++; } else skipped++;
+      if (overwrite) { list[idx.get(k)] = { ...clean, id: list[idx.get(k)].id, updated: Date.now() }; updated++; } else skipped++;
     } else {
+      if (tombs[k]) { skipped++; return; }
       idx.set(k, list.length);
-      list.push({ ...clean, id: crypto.randomUUID(), created: Date.now() }); added++;
+      list.push({ ...clean, id: crypto.randomUUID(), created: Date.now(), updated: w.updated || Date.now() }); added++;
     }
   });
   return { list, added, updated, skipped };
+};
+
+// ===== Đồng bộ hai chiều: gộp theo từ khóa (không phân biệt dấu), có "bia mộ" cho từ đã xóa =====
+const keyOf = w => norm(w.es);
+const mergeState = (local, remote) => {
+  const lm = new Map(local.words.map(w => [keyOf(w), w]));
+  const rm = new Map((remote.words || []).filter(w => w && w.es && w.vi).map(w => [keyOf(w), w]));
+  const tomb = {};
+  [local.deleted, remote.deleted].forEach(d => Object.entries(d || {}).forEach(([k, t]) => { tomb[k] = Math.max(tomb[k] || 0, t); }));
+  const words = [], deleted = {};
+  new Set([...lm.keys(), ...rm.keys(), ...Object.keys(tomb)]).forEach(k => {
+    const l = lm.get(k), r = rm.get(k);
+    let w = null;
+    if (l && r) w = (r.updated || 0) > (l.updated || 0) ? { ...emptyForm, ...r, family: Array.isArray(r.family) ? r.family : [], id: l.id } : l;
+    else if (l) w = l;
+    else if (r) w = { ...emptyForm, ...r, family: Array.isArray(r.family) ? r.family : [], id: r.id || crypto.randomUUID() };
+    if (tomb[k] && (!w || tomb[k] >= (w.updated || 0))) deleted[k] = tomb[k];
+    else if (w) words.push(w);
+  });
+  return { words, deleted };
+};
+const canon = st => JSON.stringify({
+  w: st.words.map(w => [keyOf(w), w.es, w.vi, w.pos || '', w.topic || '', w.family || [], w.exEs || '', w.exVi || '', w.note || '', w.updated || 0]).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)),
+  d: Object.entries(st.deleted || {}).sort()
+});
+const GIST_FILE = 'glosario-sync.json';
+const gh = (path, opts, token) => fetch('https://api.github.com' + path, { ...opts,
+  headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + token, ...(opts && opts.body ? { 'Content-Type': 'application/json' } : {}) } });
+const b64enc = bytes => { let t = ''; bytes.forEach(b => { t += String.fromCharCode(b); }); return btoa(t).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const b64dec = str => { let t = str.replace(/-/g, '+').replace(/_/g, '/'); while (t.length % 4) t += '='; return Uint8Array.from(atob(t), c => c.charCodeAt(0)); };
+const streamBytes = async (bytes, Ctor) => { const st = new Ctor('gzip'); const w = st.writable.getWriter(); w.write(bytes); w.close(); return new Uint8Array(await new Response(st.readable).arrayBuffer()); };
+const encodeCode = async data => {
+  const bytes = new TextEncoder().encode(JSON.stringify(data));
+  return typeof CompressionStream !== 'undefined' ? 'GLO1:' + b64enc(await streamBytes(bytes, CompressionStream)) : 'GLO0:' + b64enc(bytes);
+};
+const decodeCode = async code => {
+  const c = code.trim(), i = c.indexOf(':');
+  const tag = c.slice(0, i), body = c.slice(i + 1).replace(/\s+/g, '');
+  if (tag !== 'GLO1' && tag !== 'GLO0') throw new Error('Mã không bắt đầu bằng GLO1: hoặc GLO0:.');
+  let bytes = b64dec(body);
+  if (tag === 'GLO1') {
+    if (typeof DecompressionStream === 'undefined') throw new Error('Trình duyệt này không giải nén được mã GLO1.');
+    bytes = await streamBytes(bytes, DecompressionStream);
+  }
+  return JSON.parse(new TextDecoder().decode(bytes));
 };
 
 const inputCls = 'w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-[#18223A] px-3 py-2 text-sm';
@@ -448,8 +494,21 @@ function Drill({ words, topics, sound, setSound }) {
   );
 }
 
-function Settings({ settings, setSettings, words, setWords, onSync, syncing, syncMsg, canInstall, onInstall }) {
+function Settings({ settings, setSettings, words, setWords, tombs, applyState, onSync, syncing, syncMsg, canInstall, onInstall, gistSync, gistCreate, gistBusy, gistMsg }) {
   const fileRef = useRef();
+  const [codeOut, setCodeOut] = useState('');
+  const [codeIn, setCodeIn] = useState('');
+  const [codeMsg, setCodeMsg] = useState('');
+  const makeCode = async () => { try { setCodeOut(await encodeCode({ version: 1, words, deleted: tombs })); setCodeMsg(`Đã tạo mã cho ${words.length} từ.`); } catch (e) { setCodeMsg('Không tạo được mã: ' + e.message); } };
+  const copyCode = async () => { try { await navigator.clipboard.writeText(codeOut); setCodeMsg('Đã sao chép mã.'); } catch (e) { setCodeMsg('Không tự sao chép được, hãy bôi đen ô mã rồi copy.'); } };
+  const applyCode = async () => {
+    try {
+      const d = await decodeCode(codeIn);
+      if (!Array.isArray(d.words)) throw new Error('Mã không chứa danh sách từ.');
+      const before = words.length, m = applyState(d);
+      setCodeMsg(`Đã gộp xong: ${before} → ${m.words.length} từ.`); setCodeIn('');
+    } catch (e) { setCodeMsg('Không đọc được mã: ' + e.message); }
+  };
   const [msg, setMsg] = useState('');
   const toCSV = () => {
     const q = s => '"' + String(s || '').replace(/"/g, '""') + '"';
@@ -481,7 +540,44 @@ function Settings({ settings, setSettings, words, setWords, onSync, syncing, syn
         <Field label="Tên model (đổi nếu Google ngừng hỗ trợ model cũ như gemini-1.5-flash)"><input className={inputCls} value={settings.model} onChange={e => setSettings({ ...settings, model: e.target.value })} /></Field>
       </section>
       <section className="rounded-xl bg-white dark:bg-[#18223A] border border-slate-200 dark:border-slate-700 p-5 space-y-3">
-        <h2 className="text-xl font-extrabold">Đồng bộ từ vựng</h2>
+        <h2 className="text-xl font-extrabold">Đồng bộ riêng tư giữa các thiết bị (GitHub Gist)</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Từ vựng được lưu trong một Gist bí mật của riêng bạn. Đồng bộ hai chiều, gồm cả việc xóa từ: sửa ở máy nào, máy kia nhận được.</p>
+        <details className="text-sm">
+          <summary className="cursor-pointer font-semibold">Cách thiết lập (làm một lần)</summary>
+          <ol className="list-decimal ml-5 mt-2 space-y-1 text-slate-600 dark:text-slate-300">
+            <li>Đăng nhập github.com → Settings → Developer settings → Personal access tokens → <b>Tokens (classic)</b> → Generate new token (classic).</li>
+            <li>Đặt tên, chọn thời hạn, chỉ tick quyền <b>gist</b>, bấm Generate rồi copy token (chỉ hiện một lần).</li>
+            <li>Máy thứ nhất: dán token vào ô bên dưới, bấm <b>Tạo Gist mới</b>. Ô Gist ID sẽ tự điền.</li>
+            <li>Máy thứ hai: dán cùng token và cùng Gist ID vào hai ô, rồi bấm <b>Đồng bộ hai chiều ngay</b>.</li>
+          </ol>
+        </details>
+        <Field label="Token GitHub (quyền gist)"><input type="password" autoComplete="off" className={inputCls} value={settings.gistToken} onChange={e => setSettings({ ...settings, gistToken: e.target.value })} /></Field>
+        <Field label="Gist ID"><input className={inputCls} value={settings.gistId} onChange={e => setSettings({ ...settings, gistId: e.target.value })} placeholder="Tự điền sau khi tạo Gist" /></Field>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={settings.gistAuto} onChange={e => setSettings({ ...settings, gistAuto: e.target.checked })} /> Tự đồng bộ khi mở ứng dụng, khi quay lại ứng dụng và vài giây sau khi sửa dữ liệu</label>
+        <div className="flex flex-wrap gap-2">
+          <button className={btnMain} disabled={gistBusy} onClick={() => gistSync(false)}>{gistBusy ? 'Đang đồng bộ…' : '⟳ Đồng bộ hai chiều ngay'}</button>
+          <button className={btnSoft} disabled={gistBusy} onClick={() => (!settings.gistId || confirm('Đã có Gist ID. Tạo Gist mới sẽ thay ID hiện tại, các máy khác phải nhập lại ID mới. Tiếp tục?')) && gistCreate()}>Tạo Gist mới</button>
+        </div>
+        {gistMsg && <p className="text-sm text-[#b88700] dark:text-[#E9B000]" role="status">{gistMsg}</p>}
+        <p className="text-xs text-slate-500">Token và Gist ID chỉ lưu trong trình duyệt của từng máy. Không chia sẻ link Gist. Nếu mất thiết bị, hãy thu hồi token trên GitHub.</p>
+      </section>
+      <section className="rounded-xl bg-white dark:bg-[#18223A] border border-slate-200 dark:border-slate-700 p-5 space-y-3">
+        <h2 className="text-xl font-extrabold">Mã đồng bộ chuyển một lần (không cần tài khoản)</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Tạo mã trên máy này, gửi cho chính bạn (Zalo, Messenger, ghi chú) rồi dán vào máy kia để gộp. Mã chứa toàn bộ từ vựng nhưng không chứa API Key hay token.</p>
+        <div className="flex flex-wrap gap-2">
+          <button className={btnMain} onClick={makeCode}>Tạo mã từ máy này</button>
+          {codeOut && <button className={btnSoft} onClick={copyCode}>Sao chép</button>}
+          {codeOut && navigator.share && <button className={btnSoft} onClick={() => navigator.share({ title: 'Mã đồng bộ Glosario', text: codeOut }).catch(() => {})}>Chia sẻ</button>}
+          {codeOut && <button className={btnSoft} onClick={() => download('glosario-ma-dong-bo.txt', codeOut, 'text/plain')}>Tải file .txt</button>}
+        </div>
+        {codeOut && <textarea readOnly rows="3" className={inputCls + ' font-mono text-xs'} value={codeOut} onFocus={e => e.target.select()} />}
+        <Field label="Dán mã từ máy kia để gộp vào máy này"><textarea rows="3" className={inputCls + ' font-mono text-xs'} value={codeIn} onChange={e => setCodeIn(e.target.value)} placeholder="GLO1:..." /></Field>
+        <button className={btnSoft} disabled={!codeIn.trim()} onClick={applyCode}>Gộp mã vào máy này</button>
+        {codeMsg && <p className="text-sm text-[#b88700] dark:text-[#E9B000]" role="status">{codeMsg}</p>}
+        <p className="text-xs text-slate-500">Nếu bộ từ lớn mà ứng dụng chat cắt mất mã, hãy dùng nút “Tải file .txt” rồi mở file, copy toàn bộ nội dung.</p>
+      </section>
+      <section className="rounded-xl bg-white dark:bg-[#18223A] border border-slate-200 dark:border-slate-700 p-5 space-y-3">
+        <h2 className="text-xl font-extrabold">Bộ từ chung công khai (vocab.json)</h2>
         <p className="text-sm text-slate-500 dark:text-slate-400">Giữ một file JSON trên GitHub (mặc định <code>vocab.json</code> cạnh <code>index.html</code>). Mọi thiết bị bấm đồng bộ sẽ kéo các từ mới về. Đồng bộ chỉ thêm hoặc cập nhật từ, không xóa từ.</p>
         <Field label="Địa chỉ file JSON (đường dẫn tương đối hoặc link raw.githubusercontent.com)"><input className={inputCls} value={settings.syncUrl} onChange={e => setSettings({ ...settings, syncUrl: e.target.value })} placeholder="vocab.json" /></Field>
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={settings.autoSync} onChange={e => setSettings({ ...settings, autoSync: e.target.checked })} /> Tự đồng bộ mỗi khi mở ứng dụng</label>
@@ -511,7 +607,15 @@ function Settings({ settings, setSettings, words, setWords, onSync, syncing, syn
 
 function App() {
   const [words, setWords] = useState(() => load(KEY, []));
-  const [settings, setSettings] = useState(() => ({ apiKey: '', model: 'gemini-2.5-flash', syncUrl: 'vocab.json', autoSync: false, overwrite: false, emph: 'vi', sound: true, ...load(KEY + '_cfg', {}) }));
+  const [settings, setSettings] = useState(() => ({ apiKey: '', model: 'gemini-2.5-flash', syncUrl: 'vocab.json', autoSync: false, overwrite: false, emph: 'vi', sound: true, gistToken: '', gistId: '', gistAuto: true, ...load(KEY + '_cfg', {}) }));
+  const [tombs, setTombs] = useState(() => load(KEY + '_tomb', {}));
+  const tombsRef = useRef({});
+  tombsRef.current = tombs;
+  const [gistBusy, setGistBusy] = useState(false);
+  const [gistMsg, setGistMsg] = useState('');
+  const gistBusyRef = useRef(false);
+  const gistSyncRef = useRef(null);
+  const firstRun = useRef(true);
   const wordsRef = useRef([]);
   wordsRef.current = words;
   const [syncing, setSyncing] = useState(false);
@@ -523,6 +627,7 @@ function App() {
   const [q, setQ] = useState('');
   const [topic, setTopic] = useState('');
   useEffect(() => save(KEY, words), [words]);
+  useEffect(() => save(KEY + '_tomb', tombs), [tombs]);
   useEffect(() => save(KEY + '_cfg', settings), [settings]);
   useEffect(() => { document.documentElement.classList.toggle('dark', dark); save('glo_dark', dark ? '1' : '0'); try { localStorage.setItem('glo_dark', dark ? '1' : '0'); } catch (e) {} }, [dark]);
   const topics = useMemo(() => [...new Set([...TOPICS, ...words.map(w => w.topic).filter(Boolean)])], [words]);
@@ -537,12 +642,80 @@ function App() {
       const data = await r.json();
       const arr = Array.isArray(data) ? data : data.words;
       if (!Array.isArray(arr)) throw new Error('File phải là mảng JSON các thuật ngữ.');
-      const res = mergeWords(wordsRef.current, arr, settings.overwrite);
+      const res = mergeWords(wordsRef.current, arr, settings.overwrite, tombsRef.current);
       setWords(res.list);
       setSyncMsg(`Đồng bộ xong: thêm ${res.added}, cập nhật ${res.updated}, bỏ qua ${res.skipped}.`);
     } catch (e) { setSyncMsg('Không đồng bộ được: ' + e.message); }
     setSyncing(false);
   };
+
+  const gistReady = !!(settings.gistToken.trim() && settings.gistId.trim());
+  const gistSync = async (silent, auto) => {
+    if (auto && !settings.gistAuto) return;
+    if (!gistReady) { if (!silent) setGistMsg('Chưa nhập token và Gist ID.'); return; }
+    if (gistBusyRef.current) return;
+    gistBusyRef.current = true; setGistBusy(true);
+    const tk = settings.gistToken.trim(), id = encodeURIComponent(settings.gistId.trim());
+    try {
+      const r = await gh('/gists/' + id, {}, tk);
+      if (!r.ok) throw new Error(r.status === 401 ? 'Token sai hoặc đã hết hạn (401).' : r.status === 404 ? 'Không tìm thấy Gist (404): kiểm tra Gist ID và quyền gist của token.' : 'Lỗi ' + r.status);
+      const g = await r.json();
+      const f = g.files && g.files[GIST_FILE];
+      let remote = { words: [], deleted: {} };
+      if (f) {
+        const text = f.truncated ? await (await fetch(f.raw_url)).text() : f.content;
+        try { remote = JSON.parse(text); } catch (e) { throw new Error('File đồng bộ trong Gist bị hỏng.'); }
+      }
+      const local = { words: wordsRef.current, deleted: tombsRef.current };
+      const merged = mergeState(local, remote);
+      if (canon(merged) !== canon(local)) { setWords(merged.words); setTombs(merged.deleted); }
+      let pushed = false;
+      if (canon(merged) !== canon({ words: remote.words || [], deleted: remote.deleted || {} })) {
+        const body = JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify({ version: 1, savedAt: Date.now(), words: merged.words, deleted: merged.deleted }) } } });
+        const pr = await gh('/gists/' + id, { method: 'PATCH', body }, tk);
+        if (!pr.ok) throw new Error('Không ghi được lên Gist (' + pr.status + '). Token cần quyền gist.');
+        pushed = true;
+      }
+      setGistMsg('Đã đồng bộ lúc ' + new Date().toLocaleTimeString('vi-VN') + (pushed ? ' · đã cập nhật Gist.' : '.'));
+    } catch (e) { setGistMsg('Không đồng bộ được: ' + e.message); }
+    gistBusyRef.current = false; setGistBusy(false);
+  };
+  gistSyncRef.current = gistSync;
+  const gistCreate = async () => {
+    const tk = settings.gistToken.trim();
+    if (!tk) return setGistMsg('Hãy dán token trước.');
+    setGistBusy(true);
+    try {
+      const content = JSON.stringify({ version: 1, savedAt: Date.now(), words: wordsRef.current, deleted: tombsRef.current });
+      const r = await gh('/gists', { method: 'POST', body: JSON.stringify({ description: 'Glosario ES–VI – dữ liệu đồng bộ riêng tư', public: false, files: { [GIST_FILE]: { content } } }) }, tk);
+      if (!r.ok) throw new Error(r.status === 401 ? 'Token sai hoặc đã hết hạn (401).' : r.status === 403 || r.status === 404 ? 'Token không đủ quyền tạo Gist (' + r.status + ').' : 'Lỗi ' + r.status);
+      const g = await r.json();
+      setSettings(c => ({ ...c, gistId: g.id }));
+      setGistMsg('Đã tạo Gist riêng tư. Trên máy còn lại hãy nhập cùng token và Gist ID: ' + g.id);
+    } catch (e) { setGistMsg('Không tạo được Gist: ' + e.message); }
+    setGistBusy(false);
+  };
+  const applyState = remote => {
+    const merged = mergeState({ words: wordsRef.current, deleted: tombsRef.current }, remote);
+    setWords(merged.words); setTombs(merged.deleted);
+    return merged;
+  };
+  const deleteWord = id => {
+    const w = words.find(x => x.id === id);
+    if (w) setTombs(t => ({ ...t, [keyOf(w)]: Date.now() }));
+    setWords(words.filter(x => x.id !== id));
+  };
+  useEffect(() => {
+    if (firstRun.current) { firstRun.current = false; return; }
+    if (!settings.gistAuto || !gistReady) return;
+    const t = setTimeout(() => gistSyncRef.current && gistSyncRef.current(true), 3000);
+    return () => clearTimeout(t);
+  }, [words, tombs]);
+  useEffect(() => {
+    const onVis = () => { if (document.visibilityState === 'visible' && gistSyncRef.current) gistSyncRef.current(true, true); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
 
   useEffect(() => {
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -550,13 +723,21 @@ function App() {
     window.addEventListener('beforeinstallprompt', onPrompt);
     window.addEventListener('appinstalled', () => setInstallEvt(null));
     if (settings.autoSync && location.protocol.startsWith('http')) syncNow(true);
+    if (settings.gistAuto && gistReady && location.protocol.startsWith('http')) gistSync(true);
     return () => window.removeEventListener('beforeinstallprompt', onPrompt);
   }, []);
   const install = async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; setInstallEvt(null); };
 
   const saveWord = w => {
-    if (w.id) setWords(words.map(x => x.id === w.id ? w : x));
-    else setWords([{ ...w, id: crypto.randomUUID(), created: Date.now() }, ...words]);
+    const stamped = { ...w, updated: Date.now() };
+    if (w.id) {
+      const old = words.find(x => x.id === w.id);
+      if (old && keyOf(old) !== keyOf(w)) setTombs(t => ({ ...t, [keyOf(old)]: Date.now() }));
+      setWords(words.map(x => x.id === w.id ? stamped : x));
+    } else {
+      setTombs(t => { const n = { ...t }; delete n[keyOf(w)]; return n; });
+      setWords([{ ...stamped, id: crypto.randomUUID(), created: Date.now() }, ...words]);
+    }
     if (w.id) { setEditing(null); setTab('lib'); }
   };
   const tabs = [['lib', 'Thư viện'], ['add', 'Thêm từ'], ['card', 'Flashcard'], ['drill', 'Phản xạ'], ['set', 'Cài đặt']];
@@ -572,7 +753,7 @@ function App() {
           </div>
         </div>
         <div className="flex gap-2">
-          <button className={btnSoft} disabled={syncing} onClick={() => syncNow(false)} aria-label="Đồng bộ từ vựng">{syncing ? '…' : '⟳ Đồng bộ'}</button>
+          <button className={btnSoft} disabled={syncing} onClick={() => (gistReady ? gistSync(false) : syncNow(false))} aria-label="Đồng bộ từ vựng">{(syncing || gistBusy) ? '…' : '⟳ Đồng bộ'}</button>
           <button className={btnSoft} onClick={() => setDark(!dark)} aria-label="Đổi giao diện sáng/tối">{dark ? '☀️' : '🌙'}</button>
         </div>
       </header>
@@ -582,16 +763,17 @@ function App() {
             className={'px-4 py-2 text-sm font-semibold whitespace-nowrap border-b-4 ' + (tab === k ? 'border-[#E9B000]' : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-white')}>{l}</button>
         ))}
       </nav>
-      {syncMsg && tab !== 'set' && <p className="mb-4 text-sm rounded-lg px-3 py-2 bg-[#E9B000]/20" role="status">{syncMsg} <button className="underline ml-2" onClick={() => setSyncMsg('')}>Đóng</button></p>}
+      {(syncMsg || gistMsg) && tab !== 'set' && <p className="mb-4 text-sm rounded-lg px-3 py-2 bg-[#E9B000]/20" role="status">{gistMsg || syncMsg} <button className="underline ml-2" onClick={() => { setSyncMsg(''); setGistMsg(''); }}>Đóng</button></p>}
       <main>
         {tab === 'lib' && <Library words={words} topics={topics} q={q} setQ={setQ} topic={topic} setTopic={setTopic} emph={settings.emph} setEmph={v => setSettings(c => ({ ...c, emph: v }))}
-          onEdit={w => { setEditing(w); setTab('add'); }} onDelete={id => setWords(words.filter(w => w.id !== id))} />}
+          onEdit={w => { setEditing(w); setTab('add'); }} onDelete={deleteWord} />}
         {tab === 'add' && <AddForm key={editing ? editing.id : 'new'} initial={editing} topics={topics} settings={settings}
           onSave={saveWord} onCancel={editing ? () => { setEditing(null); setTab('lib'); } : null} />}
         {tab === 'card' && <Cards words={words} topics={topics} />}
         {tab === 'drill' && <Drill words={words} topics={topics} sound={settings.sound} setSound={v => setSettings(c => ({ ...c, sound: v }))} />}
         {tab === 'set' && <Settings settings={settings} setSettings={setSettings} words={words} setWords={setWords}
-          onSync={syncNow} syncing={syncing} syncMsg={syncMsg} canInstall={!!installEvt} onInstall={install} />}
+          tombs={tombs} applyState={applyState} onSync={syncNow} syncing={syncing} syncMsg={syncMsg} canInstall={!!installEvt} onInstall={install}
+          gistSync={gistSync} gistCreate={gistCreate} gistBusy={gistBusy} gistMsg={gistMsg} />}
       </main>
     </div>
   );
