@@ -79,7 +79,7 @@ const { useState, useEffect, useMemo, useRef } = React;
 const POS = ['Danh từ', 'Động từ', 'Tính từ', 'Trạng từ', 'Cụm từ'];
 const TOPICS = ['Luật', 'Kinh tế', 'Y tế', 'Ngoại giao', 'Du lịch', 'Văn hóa', 'Kỹ thuật', 'Chung'];
 const KEY = 'glosario_es_vi_v1';
-const emptyForm = { es: '', vi: '', pos: 'Danh từ', topic: 'Chung', family: [], exEs: '', exVi: '', note: '' };
+const emptyForm = { es: '', vi: '', pos: 'Danh từ', topic: 'Chung', sub: '', family: [], syn: [], def: '', exEs: '', exVi: '', note: '', src: '', status: 'new' };
 
 const load = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
@@ -98,7 +98,7 @@ const mergeWords = (current, incoming, overwrite, tombs = {}) => {
   let added = 0, updated = 0, skipped = 0;
   incoming.forEach(w => {
     if (!w || !w.es || !w.vi) { skipped++; return; }
-    const clean = { ...emptyForm, ...w, family: Array.isArray(w.family) ? w.family : [] };
+    const clean = { ...emptyForm, ...w, family: Array.isArray(w.family) ? w.family : [], syn: Array.isArray(w.syn) ? w.syn : [] };
     const k = norm(w.es);
     if (idx.has(k)) {
       if (overwrite) { list[idx.get(k)] = { ...clean, id: list[idx.get(k)].id, updated: Date.now() }; updated++; } else skipped++;
@@ -122,16 +122,16 @@ const mergeState = (local, remote) => {
   new Set([...lm.keys(), ...rm.keys(), ...Object.keys(tomb)]).forEach(k => {
     const l = lm.get(k), r = rm.get(k);
     let w = null;
-    if (l && r) w = (r.updated || 0) > (l.updated || 0) ? { ...emptyForm, ...r, family: Array.isArray(r.family) ? r.family : [], id: l.id } : l;
+    if (l && r) w = (r.updated || 0) > (l.updated || 0) ? { ...emptyForm, ...r, family: Array.isArray(r.family) ? r.family : [], syn: Array.isArray(r.syn) ? r.syn : [], id: l.id } : l;
     else if (l) w = l;
-    else if (r) w = { ...emptyForm, ...r, family: Array.isArray(r.family) ? r.family : [], id: r.id || crypto.randomUUID() };
+    else if (r) w = { ...emptyForm, ...r, family: Array.isArray(r.family) ? r.family : [], syn: Array.isArray(r.syn) ? r.syn : [], id: r.id || crypto.randomUUID() };
     if (tomb[k] && (!w || tomb[k] >= (w.updated || 0))) deleted[k] = tomb[k];
     else if (w) words.push(w);
   });
   return { words, deleted };
 };
 const canon = st => JSON.stringify({
-  w: st.words.map(w => [keyOf(w), w.es, w.vi, w.pos || '', w.topic || '', w.family || [], w.exEs || '', w.exVi || '', w.note || '', w.updated || 0]).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)),
+  w: st.words.map(w => [keyOf(w), w.es, w.vi, w.pos || '', w.topic || '', w.family || [], w.exEs || '', w.exVi || '', w.note || '', w.sub || '', w.syn || [], w.def || '', w.src || '', w.status || 'new', w.updated || 0]).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)),
   d: Object.entries(st.deleted || {}).sort()
 });
 const GIST_FILE = 'glosario-sync.json';
@@ -156,6 +156,210 @@ const decodeCode = async code => {
   return JSON.parse(new TextDecoder().decode(bytes));
 };
 
+// ===== Xuất Excel theo cấu trúc chung của các glosario K22 / BDTC / DN2 =====
+const loadScript = src => new Promise((res, rej) => {
+  if (window.ExcelJS) return res();
+  const el = document.createElement('script');
+  el.src = src; el.onload = res;
+  el.onerror = () => rej(new Error('Không tải được thư viện Excel (cần có mạng ở lần xuất đầu tiên).'));
+  document.head.appendChild(el);
+});
+const POS_ABBR = { 'Danh từ': 'n', 'Động từ': 'v', 'Tính từ': 'adj', 'Trạng từ': 'adv', 'Cụm từ': 'loc.' };
+const sheetName = (name, used) => {
+  const base = (name.replace(/[\/\\]/g, '-').replace(/[\[\]:*?]/g, ' ').replace(/\s+/g, ' ').trim() || 'Sheet').slice(0, 31);
+  let n = base, i = 2;
+  while (used.has(n.toLowerCase())) { const suf = ' ' + i++; n = base.slice(0, 31 - suf.length) + suf; }
+  used.add(n.toLowerCase());
+  return n;
+};
+const exportXlsx = async (words, mode) => {
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Glosario ES–VI'; wb.created = new Date();
+  const F = { name: 'Arial', size: 11 };
+  const thin = { style: 'thin', color: { argb: 'FFD9D5C7' } };
+  const border = { top: thin, left: thin, bottom: thin, right: thin };
+  const solid = argb => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
+  const topics = [...new Set(words.map(w => w.topic || 'Chung'))].sort((a, b) => a.localeCompare(b, 'vi'));
+  const dirs = mode === 'both' ? ['es-vi', 'vi-es'] : [mode];
+  const used = new Set(['tổng quan']);
+  const idx = wb.addWorksheet('Tổng quan');
+  const summary = [];
+  topics.forEach((t, ti) => dirs.forEach(d => {
+    const esFirst = d === 'es-vi';
+    const items = words.filter(w => (w.topic || 'Chung') === t)
+      .sort((a, b) => ((a.sub ? 0 : 1) - (b.sub ? 0 : 1)) || (a.sub || '').localeCompare(b.sub || '', 'vi') || (esFirst ? a.es.localeCompare(b.es, 'es') : a.vi.localeCompare(b.vi, 'vi')));
+    const name = sheetName(dirs.length > 1 ? t.slice(0, 24) + (esFirst ? ' ES-VI' : ' VI-ES') : t, used);
+    const cols = [
+      ['Nº', 6], ['Subtema', 22], [esFirst ? 'Término (ESPAÑOL)' : 'Término (VIETNAMITA)', 30], [esFirst ? 'Equivalente (VIETNAMITA)' : 'Equivalente (ESPAÑOL)', 30],
+      ['Cat. gram.', 9], ['Definición / Giải thích', 38], ['Sinónimos', 24], ['Familia de palabras', 26],
+      [esFirst ? 'Contexto / Ejemplo (ES)' : 'Contexto / Ejemplo (VI)', 38], [esFirst ? 'Traducción (VI)' : 'Traducción (ES)', 38],
+      ['Nota de uso', 34], ['Enlace / Ref.', 28], ['Revisado', 10]
+    ];
+    const last = items.length + 2;
+    const ws = wb.addWorksheet(name, { views: [{ state: 'frozen', xSplit: 3, ySplit: 2 }], properties: { tabColor: { argb: 'FFE9B000' } } });
+    ws.columns = cols.map(c => ({ width: c[1] }));
+    ws.mergeCells(1, 1, 1, cols.length);
+    const title = ws.getCell(1, 1);
+    title.value = `${ti + 1}. ${t.toUpperCase()} · ${esFirst ? 'ESPAÑOL → VIETNAMITA' : 'VIETNAMITA → ESPAÑOL'}`;
+    title.font = { ...F, size: 14, bold: true, color: { argb: 'FFF7F5EF' } };
+    title.fill = solid('FF14213D'); title.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+    ws.getRow(1).height = 28;
+    const hr = ws.getRow(2); hr.height = 34;
+    cols.forEach((c, i) => {
+      const cell = hr.getCell(i + 1);
+      cell.value = c[0]; cell.font = { ...F, bold: true, color: { argb: 'FF14213D' } };
+      cell.fill = solid('FFE9B000'); cell.border = border;
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    });
+    items.forEach((w, i) => {
+      const r = ws.addRow([
+        { formula: 'ROW()-2', result: i + 1 }, w.sub || '', esFirst ? w.es : w.vi, esFirst ? w.vi : w.es, POS_ABBR[w.pos] || w.pos || '', w.def || '', (w.syn || []).join('; '), (w.family || []).join('; '),
+        esFirst ? w.exEs : w.exVi, esFirst ? w.exVi : w.exEs, w.note || '', w.src || '', w.status === 'ok' ? 'Sí' : ''
+      ]);
+      r.eachCell({ includeEmpty: true }, (cell, ci) => {
+        cell.font = F; cell.border = border;
+        cell.alignment = { vertical: 'top', wrapText: true, horizontal: [1, 5, 13].includes(ci) ? 'center' : 'left' };
+      });
+      r.getCell(3).font = { ...F, bold: true };
+      r.getCell(2).fill = solid('FFF7F5EF');
+      if (/^https?:\/\//.test(w.src || '')) r.getCell(12).value = { text: w.src, hyperlink: w.src };
+      r.getCell(13).dataValidation = { type: 'list', allowBlank: true, formulae: ['"Sí,No"'] };
+    });
+    ws.addConditionalFormatting({ ref: `M3:M${last}`, rules: [{ type: 'cellIs', operator: 'equal', formulae: ['"Sí"'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFD8EFE5' } } } }] });
+    ws.autoFilter = { from: { row: 2, column: 1 }, to: { row: last, column: cols.length } };
+    ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, printTitlesRow: '1:2' };
+    summary.push({ name, count: items.length, dir: esFirst ? 'ES → VI' : 'VI → ES', topic: t });
+  }));
+  // ----- Sheet tổng quan -----
+  idx.columns = [{ width: 6 }, { width: 34 }, { width: 16 }, { width: 14 }, { width: 28 }];
+  idx.mergeCells('A1:E1');
+  const t1 = idx.getCell('A1');
+  t1.value = 'GLOSARIO ES–VI · Thuật ngữ biên phiên dịch Tây Ban Nha – Việt';
+  t1.font = { ...F, size: 14, bold: true, color: { argb: 'FFF7F5EF' } }; t1.fill = solid('FF14213D');
+  t1.alignment = { vertical: 'middle', indent: 1 }; idx.getRow(1).height = 28;
+  idx.getCell('A2').value = `Xuất ngày ${new Date().toLocaleDateString('vi-VN')} · ${words.length} thuật ngữ · ${topics.length} chủ đề`;
+  idx.getCell('A2').font = { ...F, italic: true, color: { argb: 'FF5F6B7D' } };
+  ['Nº', 'Sheet (bấm để mở)', 'Số dòng', 'Hướng dịch', 'Chủ đề'].forEach((h, i) => {
+    const c = idx.getRow(4).getCell(i + 1);
+    c.value = h; c.font = { ...F, bold: true, color: { argb: 'FF14213D' } }; c.fill = solid('FFE9B000'); c.border = border;
+    c.alignment = { horizontal: 'center', vertical: 'middle' };
+  });
+  summary.forEach((x, i) => {
+    const r = idx.getRow(5 + i);
+    r.getCell(1).value = { formula: 'ROW()-4', result: i + 1 };
+    r.getCell(2).value = { text: x.name, hyperlink: `#'${x.name.replace(/'/g, "''")}'!A1` };
+    r.getCell(3).value = { formula: `COUNTA('${x.name.replace(/'/g, "''")}'!B3:B2000)`, result: x.count };
+    r.getCell(4).value = x.dir; r.getCell(5).value = x.topic;
+    for (let c = 1; c <= 5; c++) { const cell = r.getCell(c); cell.font = c === 2 ? { ...F, color: { argb: 'FF0563C1' }, underline: true } : F; cell.border = border; cell.alignment = { horizontal: c === 2 || c === 5 ? 'left' : 'center' }; }
+  });
+  const tr = 5 + summary.length;
+  idx.getCell(`B${tr}`).value = 'Tổng số dòng';
+  idx.getCell(`C${tr}`).value = { formula: `SUM(C5:C${tr - 1})`, result: summary.reduce((a, x) => a + x.count, 0) };
+  ['B', 'C'].forEach(c => { idx.getCell(`${c}${tr}`).font = { ...F, bold: true }; idx.getCell(`${c}${tr}`).border = border; });
+  idx.getCell(`C${tr}`).alignment = { horizontal: 'center' };
+  const legend = [
+    'Chú giải',
+    'Subtema: nhóm nhỏ trong chủ đề. Các dòng xếp theo Subtema rồi theo chữ cái; lọc cột Subtema để ôn từng cụm.',
+    'Nº: công thức =ROW()-2, tự đánh số lại khi sắp xếp hoặc lọc.',
+    'Cat. gram.: n = danh từ, v = động từ, adj = tính từ, adv = trạng từ, loc. = cụm từ.',
+    'Sinónimos và Familia de palabras: ngăn cách bằng dấu “;”. Revisado: Sí = đã kiểm chứng.',
+    'Bố cục bám theo các glosario K22/BDTC/DN2: dòng 1 là tên chủ đề, dòng 2 là tiêu đề cột, cố định ba cột đầu, có bộ lọc.'
+  ];
+  legend.forEach((t, i) => {
+    const row = tr + 2 + i;
+    if (i > 0) { idx.mergeCells(`A${row}:E${row}`); idx.getRow(row).height = 30; }
+    const c = idx.getCell(`A${row}`);
+    c.value = t; c.font = { ...F, bold: i === 0, size: i === 0 ? 12 : 10, color: { argb: i === 0 ? 'FF14213D' : 'FF5F6B7D' } };
+    c.alignment = { wrapText: i > 0, vertical: 'top' };
+  });
+  idx.pageSetup = { orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+  const buf = await wb.xlsx.writeBuffer();
+  const d = new Date(), pad = n => String(n).padStart(2, '0');
+  download(`glosario-es-vi-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}.xlsx`, buf, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  return { sheets: summary.length, rows: summary.reduce((a, x) => a + x.count, 0) };
+};
+
+// ===== Nhập Excel: nhận diện cột theo tiêu đề, chiều dịch theo nội dung =====
+const cellText = v => {
+  if (v == null) return '';
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  if (typeof v === 'object') {
+    if (v.hyperlink) return String(v.hyperlink);
+    if (v.richText) return v.richText.map(r => r.text).join('');
+    if (v.text !== undefined) return cellText(v.text);
+    if (v.result !== undefined) return cellText(v.result);
+    return '';
+  }
+  return String(v);
+};
+const nh = v => norm(cellText(v)).replace(/\s+/g, ' ').trim();
+const VI_CH = /[ăâđêôơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/gi;
+const viCount = t => (String(t).match(VI_CH) || []).length;
+const POS_FROM = { n: 'Danh từ', s: 'Danh từ', sust: 'Danh từ', 'sust.': 'Danh từ', v: 'Động từ', adj: 'Tính từ', adv: 'Trạng từ', loc: 'Cụm từ', 'loc.': 'Cụm từ' };
+const HDR = [
+  ['sub', h => /^subtema/.test(h)], ['pos', h => /categor|gramatical|cat\. gram/.test(h)],
+  ['defeq', h => /^definicion del equivalente/.test(h)], ['def', h => /^(definicion|explicacion)/.test(h)],
+  ['syn', h => /^sinonimos/.test(h)], ['family', h => /^familia/.test(h)], ['trad', h => /^traduccion/.test(h)],
+  ['ex', h => /^(contexto|ejemplo)/.test(h)], ['note', h => /^nota/.test(h)], ['src', h => /^(enlace|ref|fuente)/.test(h)],
+  ['status', h => /^revisado/.test(h)], ['equiv', h => /^equivalente/.test(h)], ['term', h => /^termino/.test(h)]
+];
+const splitList = t => t.split(/[;,\n]+/).map(x => x.replace(/^(sn|sin|ant)\s*\.?\s*:\s*/i, '').trim()).filter(Boolean);
+const importXlsx = async file => {
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(await file.arrayBuffer());
+  const items = [], sheets = [], skipped = [];
+  wb.eachSheet(ws => {
+    const nm = norm(ws.name).trim();
+    if (nm === 'tong quan') return;
+    let hr = 0, map = null;
+    for (let r = 1; r <= Math.min(5, ws.rowCount) && !hr; r++) {
+      const m = {};
+      ws.getRow(r).eachCell({ includeEmpty: false }, (c, ci) => {
+        const h = nh(c.value); if (!h) return;
+        const hit = HDR.find(([, f]) => f(h));
+        if (hit) (m[hit[0]] = m[hit[0]] || []).push({ ci, h });
+      });
+      if (m.term && m.equiv) { hr = r; map = m; }
+    }
+    if (!hr) { skipped.push(ws.name); return; }
+    const tc = map.term[0].ci, ec = map.equiv[0].ci;
+    const rows = [];
+    for (let r = hr + 1; r <= ws.rowCount; r++) {
+      const row = ws.getRow(r);
+      const t = cellText(row.getCell(tc).value).trim(), e = cellText(row.getCell(ec).value).trim();
+      if (t && e) rows.push({ row, t, e });
+    }
+    if (!rows.length) { skipped.push(ws.name); return; }
+    const sm = rows.slice(0, 20);
+    const vt = sm.reduce((a, x) => a + viCount(x.t), 0), ve = sm.reduce((a, x) => a + viCount(x.e), 0);
+    const th = map.term[0].h;
+    const viFirst = vt !== ve ? vt > ve : th.includes('vietnam') ? true : th.includes('espanol') ? false : /\bvie?\b[\s-]*es/.test(nm);
+    const topic = ws.name.replace(/^\s*\d+\s*[.)-]\s*/, '')
+      .replace(/\s*[-–]?\s*\b(es|esp)\b\s*[-–]\s*\b(vi|vie)\b\s*$/i, '').replace(/\s*[-–]?\s*\b(vi|vie)\b\s*[-–]\s*\b(es|esp)\b\s*$/i, '')
+      .replace(/\s+(esp|vie)\s*$/i, '').trim() || 'Chung';
+    const one = s => s.replace(/\s*\n\s*/g, '; ');
+    rows.forEach(({ row, t, e }) => {
+      const g = k => (map[k] || []).map(x => cellText(row.getCell(x.ci).value).trim()).filter(Boolean);
+      let exEs = '', exVi = '';
+      [g('ex').join(' '), g('trad').join(' ')].forEach(x => { if (!x) return; if (viCount(x) >= 2) exVi = exVi || x; else exEs = exEs || x; });
+      const defeq = g('defeq')[0];
+      const note = [g('note').join(' · '), defeq ? 'Def. equivalente: ' + defeq : ''].filter(Boolean).join(' · ');
+      const srcRaw = g('src').join(' '), url = (srcRaw.match(/https?:\/\/\S+/) || [srcRaw])[0] || '';
+      const pr = (g('pos')[0] || '');
+      const pos = POS.find(x => x.toLowerCase() === pr.toLowerCase()) || POS_FROM[pr.toLowerCase().replace(/[()\s]/g, '')] || (/\s/.test(t) ? 'Cụm từ' : 'Danh từ');
+      items.push({
+        ...emptyForm, es: one(viFirst ? e : t), vi: one(viFirst ? t : e), pos, topic, sub: (g('sub')[0] || '').replace(/\s*\n\s*/g, ' '),
+        family: splitList(g('family').join(';')), syn: splitList(g('syn').join(';')), def: g('def').join(' '), exEs, exVi, note, src: url,
+        status: /^(si|x|ok|✓)$/.test(norm(g('status')[0] || '')) ? 'ok' : 'new'
+      });
+    });
+    sheets.push({ name: ws.name, topic, rows: rows.length, dir: viFirst ? 'VI→ES' : 'ES→VI' });
+  });
+  return { items, sheets, skipped };
+};
+
 const inputCls = 'input';
 const btn = 'btn';
 const btnMain = 'btn btn-primary';
@@ -175,7 +379,7 @@ const ICONS = {
   eye: 'M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z|M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
   eyeoff: 'M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a13.16 13.16 0 0 1-1.67 2.68|M6.61 6.61A13.53 13.53 0 0 0 2 12s3 8 10 8a9.74 9.74 0 0 0 5.39-1.61|m2 2 20 20',
   clock: 'M12 6v6l4 2|M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', check: 'M20 6 9 17l-5-5', redo: 'M3 12a9 9 0 1 0 3-6.7L3 8|M3 3v5h5',
-  grid: 'M3 3h7v7H3z|M14 3h7v7h-7z|M14 14h7v7h-7z|M3 14h7v7H3z', list: 'M8 6h13|M8 12h13|M8 18h13|M3 6h.01|M3 12h.01|M3 18h.01'
+  grid: 'M3 3h7v7H3z|M14 3h7v7h-7z|M14 14h7v7h-7z|M3 14h7v7H3z', list: 'M8 6h13|M8 12h13|M8 18h13|M3 6h.01|M3 12h.01|M3 18h.01', down: 'm6 9 6 6 6-6'
 };
 const Icon = ({ n, s = 18 }) => (
   <svg viewBox="0 0 24 24" width={s} height={s} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -231,6 +435,20 @@ function SecretInput({ label, value, onChange }) {
     </Field>
   );
 }
+function TagInput({ label, items, onChange, placeholder }) {
+  const [v, setV] = useState('');
+  const add = () => { const t = v.trim(); if (t && !items.includes(t)) onChange([...items, t]); setV(''); };
+  return (
+    <div>
+      <span className="field-label">{label}</span>
+      <div className="flex gap-2">
+        <input className="input" aria-label={label} value={v} onChange={e => setV(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), add())} placeholder={placeholder} />
+        <button type="button" className="btn btn-secondary" onClick={add}><Icon n="plus" s={16} />Thêm</button>
+      </div>
+      {items.length > 0 && <div className="flex flex-wrap gap-2 mt-2">{items.map(x => <span key={x} className="chip">{x}<button type="button" className="ml-1 t-muted hover:text-[var(--err)]" aria-label={'Bỏ ' + x} onClick={() => onChange(items.filter(y => y !== x))}><Icon n="x" s={14} /></button></span>)}</div>}
+    </div>
+  );
+}
 function Field({ label, hint, children }) {
   return <label className="block"><span className="field-label">{label}</span>{children}{hint && <span className="text-xs t-muted mt-1 block">{hint}</span>}</label>;
 }
@@ -281,7 +499,7 @@ function Detail({ w, onClose, onEdit, emph }) {
       <div className="sheet card w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto !rounded-b-none sm:!rounded-b-2xl p-5 sm:p-6 space-y-5" role="dialog" aria-modal="true" aria-label={'Chi tiết ' + w.es} onClick={ev => ev.stopPropagation()}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex flex-wrap gap-2 mb-2"><span className="badge badge-gold">{w.topic}</span><span className="badge">{w.pos}</span></div>
+            <div className="flex flex-wrap gap-2 mb-2"><span className="badge badge-gold">{w.topic}{w.sub ? ' › ' + w.sub : ''}</span><span className="badge">{w.pos}</span>{w.status === 'ok' && <span className="badge" style={{ background: 'rgba(35,134,107,.14)', color: 'var(--ok)' }}>Đã kiểm chứng</span>}</div>
             <h2 className={'h-display text-3xl leading-tight t-brand ' + (emph === 'es' ? 'font-bold' : 'font-semibold')}>{big}</h2>
             <p className={'text-lg t-muted mt-1 ' + (emph === 'es' ? 'font-medium' : 'font-semibold')}>{small}</p>
           </div>
@@ -290,6 +508,7 @@ function Detail({ w, onClose, onEdit, emph }) {
             <button className="btn btn-secondary btn-icon" onClick={onClose} aria-label="Đóng" title="Đóng"><Icon n="x" /></button>
           </div>
         </div>
+        {w.def && <div><p className="field-label">Giải thích</p><p className="text-sm">{w.def}</p></div>}
         {(w.exEs || w.exVi) && <div className="rounded-xl p-4 border-l-4 border-[#E9B000]" style={{ background: 'var(--surface2)' }}>
           <p className="font-medium italic">{w.exEs}</p><p className="t-muted mt-1">{w.exVi}</p>
           <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
@@ -297,6 +516,8 @@ function Detail({ w, onClose, onEdit, emph }) {
             {w.exVi && <a className="underline t-muted" href={`https://www.deepl.com/translator#vi/es/${encodeURIComponent(w.exVi)}`} target="_blank" rel="noopener noreferrer">Đối chiếu VI→ES bằng DeepL ↗</a>}
           </p></div>}
         {w.note && <div><p className="field-label">Ghi chú chuyên ngành</p><p className="text-sm">{w.note}</p></div>}
+        {(w.syn || []).length > 0 && <div><p className="field-label">Đồng nghĩa</p><div className="flex flex-wrap gap-2">{w.syn.map(x => <button key={x} onClick={() => go(x)} className="chip">{x}</button>)}</div></div>}
+        {w.src && <div><p className="field-label">Nguồn / tham khảo</p>{/^https?:\/\//.test(w.src) ? <a className="text-sm underline break-all" href={w.src} target="_blank" rel="noopener noreferrer">{w.src}</a> : <p className="text-sm">{w.src}</p>}</div>}
         <div>
           <p className="field-label">Họ từ — bấm một dạng từ để xem định nghĩa</p>
           <div className="flex flex-wrap gap-2">
@@ -325,20 +546,34 @@ function Detail({ w, onClose, onEdit, emph }) {
 function Library({ words, onEdit, onDelete, onAdd, topics, q, setQ, topic, setTopic, emph, setEmph, view, setView }) {
   const [open, setOpen] = useState(null);
   const [pos, setPos] = useState('');
+  const [sub, setSub] = useState('');
+  const [collapsed, setCollapsed] = useState({});
+  const subs = useMemo(() => [...new Set(words.filter(w => !topic || w.topic === topic).map(w => w.sub).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi')), [words, topic]);
+  const subOk = subs.includes(sub) ? sub : '';
   const list = useMemo(() => {
     const n = norm(q);
-    return words.filter(w => (!topic || w.topic === topic) && (!pos || w.pos === pos) &&
-      (!n || norm(w.es).includes(n) || norm(w.vi).includes(n) || w.family.some(f => norm(f).includes(n))));
-  }, [words, q, topic, pos]);
+    return words.filter(w => (!topic || w.topic === topic) && (!pos || w.pos === pos) && (!subOk || w.sub === subOk) &&
+      (!n || norm(w.es).includes(n) || norm(w.vi).includes(n) || norm(w.sub || '').includes(n) || w.family.some(f => norm(f).includes(n)) || (w.syn || []).some(f => norm(f).includes(n))));
+  }, [words, q, topic, pos, subOk]);
+  const groups = useMemo(() => {
+    if (!list.some(w => w.sub)) return [{ key: '_', label: null, items: list.map((w, i) => ({ w, n: i + 1 })) }];
+    const key = w => (topic ? '' : (w.topic || '') + ' › ') + (w.sub || 'Chưa phân nhóm');
+    const sorted = [...list].sort((a, b) => (topic ? 0 : (a.topic || '').localeCompare(b.topic || '', 'vi')) || ((a.sub ? 0 : 1) - (b.sub ? 0 : 1)) || (a.sub || '').localeCompare(b.sub || '', 'vi') || a.es.localeCompare(b.es, 'es'));
+    const m = new Map();
+    sorted.forEach(w => { const k = key(w); if (!m.has(k)) m.set(k, { key: k, label: k, items: [] }); m.get(k).items.push(w); });
+    let c = 0;
+    return [...m.values()].map(g => ({ ...g, items: g.items.map(w => ({ w, n: ++c })) }));
+  }, [list, topic]);
+  const toggleGroup = k => setCollapsed(c => ({ ...c, [k]: !c[k] }));
   const openWord = open ? words.find(w => w.id === open) : null;
   const stop = fn => ev => { ev.stopPropagation(); fn(); };
   const stats = useMemo(() => [
     ['Thuật ngữ', words.length],
     ['Chủ đề đang dùng', new Set(words.map(w => w.topic).filter(Boolean)).size],
-    ['Có câu ví dụ', words.filter(w => w.exEs || w.exVi).length],
-    ['Dạng từ trong họ từ', words.reduce((a, w) => a + w.family.length, 0)]
+    ['Subtema', new Set(words.map(w => w.sub).filter(Boolean)).size],
+    ['Có câu ví dụ', words.filter(w => w.exEs || w.exVi).length]
   ], [words]);
-  const filtered = q || topic || pos;
+  const filtered = q || topic || pos || subOk;
   return (
     <div className="space-y-5">
       <PageHead title="Thư viện thuật ngữ" text="Tra cứu, lọc và ôn lại kho thuật ngữ biên phiên dịch của bạn. Bấm vào một thẻ để xem chi tiết và tra từ điển." />
@@ -352,7 +587,8 @@ function Library({ words, onEdit, onDelete, onAdd, topics, q, setQ, topic, setTo
         <div className="flex flex-wrap gap-2 items-center">
           <select className="input !w-auto" aria-label="Lọc theo chủ đề" value={topic} onChange={e => setTopic(e.target.value)}><option value="">Mọi chủ đề</option>{topics.map(t => <option key={t}>{t}</option>)}</select>
           <select className="input !w-auto" aria-label="Lọc theo từ loại" value={pos} onChange={e => setPos(e.target.value)}><option value="">Mọi từ loại</option>{POS.map(t => <option key={t}>{t}</option>)}</select>
-          {filtered && <button className="btn btn-ghost" onClick={() => { setQ(''); setTopic(''); setPos(''); }}>Xóa bộ lọc</button>}
+          {subs.length > 0 && <select className="input !w-auto" aria-label="Lọc theo subtema" value={subOk} onChange={e => setSub(e.target.value)}><option value="">Mọi subtema</option>{subs.map(t => <option key={t}>{t}</option>)}</select>}
+          {filtered && <button className="btn btn-ghost" onClick={() => { setQ(''); setTopic(''); setPos(''); setSub(''); }}>Xóa bộ lọc</button>}
           <div className="sm:ml-auto flex flex-wrap gap-2 items-center">
             <Seg label="Chọn ngôn ngữ nổi bật" value={emph} onChange={setEmph} options={[['vi', 'Nổi bật: Việt'], ['es', 'Nổi bật: Tây Ban Nha']]} />
             <div className="seg" role="group" aria-label="Kiểu hiển thị thư viện">
@@ -364,20 +600,26 @@ function Library({ words, onEdit, onDelete, onAdd, topics, q, setQ, topic, setTo
       </div>
       <p className="text-xs t-muted">{list.length} / {words.length} thuật ngữ</p>
       {words.length === 0 ? <EmptyArt title="Thư viện còn trống" text="Thêm thuật ngữ đầu tiên, nhập file JSON hoặc đồng bộ từ vựng ở tab Cài đặt." action={<button className="btn btn-primary mt-2" onClick={onAdd}><Icon n="plus" s={16} />Thêm thuật ngữ</button>} />
-        : list.length === 0 ? <EmptyArt title="Không có thuật ngữ phù hợp" text="Thử từ khóa khác hoặc bỏ bớt bộ lọc." action={<button className="btn btn-secondary mt-2" onClick={() => { setQ(''); setTopic(''); setPos(''); }}>Xóa bộ lọc</button>} />
+        : list.length === 0 ? <EmptyArt title="Không có thuật ngữ phù hợp" text="Thử từ khóa khác hoặc bỏ bớt bộ lọc." action={<button className="btn btn-secondary mt-2" onClick={() => { setQ(''); setTopic(''); setPos(''); setSub(''); }}>Xóa bộ lọc</button>} />
         : view === 'list' ? (
           <div className="card overflow-hidden">
             <div className="hidden md:grid grid-cols-[3.5rem_1fr_1fr_9rem] gap-4 px-4 py-3 text-xs font-semibold uppercase tracking-wider t-muted border-b" style={{ borderColor: 'var(--border)' }}>
               <span className="text-center">#</span><span>Tiếng Tây Ban Nha</span><span>Tiếng Việt</span><span>Từ loại</span>
             </div>
             <div role="list">
-              {list.map((w, idx) => (
-                <div key={w.id} role="button" tabIndex="0" onClick={() => setOpen(w.id)} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setOpen(w.id))}
-                  className="list-row grid grid-cols-[2rem_1fr_auto] md:grid-cols-[3.5rem_1fr_1fr_9rem] gap-x-3 md:gap-x-4 px-4 py-3 items-center cursor-pointer">
-                  <span className="row-span-2 md:row-span-1 text-center t-muted tabular-nums text-sm">{idx + 1}</span>
-                  <span className={'truncate ' + (emph === 'es' ? 'font-bold t-brand text-base' : 'font-medium t-muted')}>{w.es}</span>
-                  <span className={'col-start-2 md:col-start-auto truncate ' + (emph === 'vi' ? 'font-semibold t-brand text-base' : 'font-medium t-muted text-sm md:text-base')}>{w.vi}</span>
-                  <span className="col-start-3 row-start-1 row-span-2 md:col-start-auto md:row-start-auto md:row-span-1 justify-self-end md:justify-self-start"><span className="badge">{w.pos}</span></span>
+              {groups.map(g => (
+                <div key={g.key}>
+                  {g.label && <button className="w-full flex items-center gap-2 px-4 py-2 text-left text-xs font-bold tracking-wide t-gold" style={{ background: 'var(--surface2)' }} onClick={() => toggleGroup(g.key)} aria-expanded={!collapsed[g.key]}>
+                    <Icon n={collapsed[g.key] ? 'right' : 'down'} s={14} />{g.label}<span className="ml-auto t-muted font-semibold">{g.items.length}</span></button>}
+                  {!collapsed[g.key] && g.items.map(({ w, n }) => (
+                    <div key={w.id} role="button" tabIndex="0" onClick={() => setOpen(w.id)} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setOpen(w.id))}
+                      className="list-row grid grid-cols-[2rem_1fr_auto] md:grid-cols-[3.5rem_1fr_1fr_9rem] gap-x-3 md:gap-x-4 px-4 py-3 items-center cursor-pointer">
+                      <span className="row-span-2 md:row-span-1 text-center t-muted tabular-nums text-sm">{n}</span>
+                      <span className={'truncate ' + (emph === 'es' ? 'font-bold t-brand text-base' : 'font-medium t-muted')}>{w.es}</span>
+                      <span className={'col-start-2 md:col-start-auto truncate ' + (emph === 'vi' ? 'font-semibold t-brand text-base' : 'font-medium t-muted text-sm md:text-base')}>{w.vi}</span>
+                      <span className="col-start-3 row-start-1 row-span-2 md:col-start-auto md:row-start-auto md:row-span-1 justify-self-end md:justify-self-start"><span className="badge">{w.pos}</span></span>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
@@ -387,7 +629,7 @@ function Library({ words, onEdit, onDelete, onAdd, topics, q, setQ, topic, setTo
             const big = emph === 'vi' ? w.vi : w.es, small = emph === 'vi' ? w.es : w.vi;
             return (
               <article key={w.id} role="button" tabIndex="0" onClick={() => setOpen(w.id)} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setOpen(w.id))} className="card lift p-4 cursor-pointer flex flex-col gap-3">
-                <div className="flex items-center justify-between gap-2"><span className="badge badge-gold">{w.topic}</span><span className="badge">{w.pos}</span></div>
+                <div className="flex items-center justify-between gap-2"><span className="badge badge-gold">{w.topic}{w.sub ? ' › ' + w.sub : ''}</span><span className="badge">{w.pos}</span></div>
                 <div>
                   <h3 className={'h-display text-2xl leading-tight t-brand ' + (emph === 'es' ? 'font-bold' : 'font-medium')}>{big}</h3>
                   <p className={'mt-1 t-muted ' + (emph === 'es' ? 'font-medium' : 'font-semibold')}>{small}</p>
@@ -408,8 +650,9 @@ function Library({ words, onEdit, onDelete, onAdd, topics, q, setQ, topic, setTo
   );
 }
 
-function AddForm({ initial, onSave, onCancel, topics, settings }) {
-  const [f, setF] = useState(initial || emptyForm);
+function AddForm({ initial, onSave, onCancel, topics, settings, subMap }) {
+  const [f, setF] = useState({ ...emptyForm, ...(initial || {}) });
+  const subOpts = (subMap && subMap[f.topic]) || [];
   const [fam, setFam] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -423,7 +666,7 @@ function AddForm({ initial, onSave, onCancel, topics, settings }) {
     const prompt = `Bạn là chuyên gia biên phiên dịch Tây Ban Nha - Việt. Phân tích thuật ngữ tiếng Tây Ban Nha: "${f.es.trim()}"` +
       (f.topic ? ` (chủ đề: ${f.topic})` : '') +
       `. Trả về DUY NHẤT một JSON với các khóa: "vi" (nghĩa tiếng Việt ngắn gọn, chuẩn thuật ngữ), "pos" (một trong: ${POS.join(', ')}), ` +
-      `"family" (mảng các từ cùng họ tiếng Tây Ban Nha, tối đa 6), "exEs" (một câu ví dụ tiếng Tây Ban Nha), "exVi" (bản dịch tiếng Việt của câu đó), "note" (ghi chú ngắn: collocation hoặc false friend nếu có, nếu không để rỗng).`;
+      `"family" (mảng các từ cùng họ tiếng Tây Ban Nha, tối đa 6), "exEs" (một câu ví dụ tiếng Tây Ban Nha), "exVi" (bản dịch tiếng Việt của câu đó), "note" (ghi chú ngắn: collocation hoặc false friend nếu có, nếu không để rỗng), "syn" (mảng đồng nghĩa tiếng Tây Ban Nha, tối đa 4, có thể rỗng), "def" (định nghĩa ngắn một câu bằng tiếng Việt), "sub" (subtema ngắn gọn bằng tiếng Việt${subOpts.length ? ", ưu tiên chọn một trong: " + subOpts.join("; ") + " nếu phù hợp" : ""}).`;
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(settings.model)}:generateContent?key=${encodeURIComponent(settings.apiKey)}`;
       const opts = { method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -441,7 +684,8 @@ function AddForm({ initial, onSave, onCancel, topics, settings }) {
       const d = JSON.parse(txt.replace(/```json|```/g, '').trim());
       setF(p => ({ ...p, vi: d.vi || p.vi, pos: POS.includes(d.pos) ? d.pos : p.pos,
         family: Array.isArray(d.family) ? [...new Set([...p.family, ...d.family.map(String)])] : p.family,
-        exEs: d.exEs || p.exEs, exVi: d.exVi || p.exVi, note: d.note || p.note }));
+        exEs: d.exEs || p.exEs, exVi: d.exVi || p.exVi, note: d.note || p.note,
+        syn: Array.isArray(d.syn) ? [...new Set([...(p.syn || []), ...d.syn.map(String)])] : p.syn, def: d.def || p.def, sub: p.sub || (typeof d.sub === 'string' ? d.sub : '') }));
       setMsg('Đã điền tự động. Hãy kiểm tra lại trước khi lưu.');
     } catch (e) { setMsg('Không phân tích được: ' + e.message); }
     setBusy(false);
@@ -449,7 +693,7 @@ function AddForm({ initial, onSave, onCancel, topics, settings }) {
 
   const submit = () => {
     if (!f.es.trim() || !f.vi.trim()) return setMsg('Cần có cả từ tiếng Tây Ban Nha và nghĩa tiếng Việt.');
-    onSave({ ...f, es: f.es.trim(), vi: f.vi.trim() });
+    onSave({ ...f, es: f.es.trim(), vi: f.vi.trim(), sub: (f.sub || '').trim() });
     if (!initial) { setF(emptyForm); setMsg('Đã lưu.'); }
   };
 
@@ -460,11 +704,15 @@ function AddForm({ initial, onSave, onCancel, topics, settings }) {
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label="Từ / cụm từ tiếng Tây Ban Nha *"><input className="input !font-semibold" value={f.es} onChange={e => set('es', e.target.value)} placeholder="gobernar" /></Field>
           <Field label="Nghĩa tiếng Việt *"><input className="input !font-medium" value={f.vi} onChange={e => set('vi', e.target.value)} placeholder="cai trị, điều hành" /></Field>
-          <Field label="Từ loại"><select className="input" value={f.pos} onChange={e => set('pos', e.target.value)}>{POS.map(p => <option key={p}>{p}</option>)}</select></Field>
           <Field label="Chủ đề (chọn hoặc gõ chủ đề mới)">
             <input className="input" list="topics" value={f.topic} onChange={e => set('topic', e.target.value)} />
             <datalist id="topics">{topics.map(t => <option key={t} value={t} />)}</datalist>
           </Field>
+          <Field label="Subtema (nhóm nhỏ trong chủ đề)" hint="Chọn nhóm có sẵn hoặc gõ nhóm mới, ví dụ: Hợp đồng, Hệ thống ngân hàng.">
+            <input className="input" list="subs" value={f.sub} onChange={e => set('sub', e.target.value)} />
+            <datalist id="subs">{subOpts.map(t => <option key={t} value={t} />)}</datalist>
+          </Field>
+          <Field label="Từ loại"><select className="input" value={f.pos} onChange={e => set('pos', e.target.value)}>{POS.map(p => <option key={p}>{p}</option>)}</select></Field>
         </div>
       </Section>
       <section className="card ai-card p-5 flex flex-col sm:flex-row sm:items-center gap-4">
@@ -472,13 +720,9 @@ function AddForm({ initial, onSave, onCancel, topics, settings }) {
           <p className="text-sm t-muted mt-1">Gemini điền nghĩa tiếng Việt, từ loại, họ từ, câu ví dụ song ngữ và ghi chú từ từ tiếng Tây Ban Nha bạn đã nhập.</p></div>
         <button className="btn btn-primary !min-h-[48px] !px-6" disabled={busy} onClick={analyze}>{busy ? <><span className="spin" />Đang phân tích…</> : <><Icon n="sparkles" s={16} />Phân tích bằng AI</>}</button>
       </section>
-      <Section n="B" title="Họ từ">
-        <div className="flex gap-2">
-          <input className="input" aria-label="Thêm dạng từ" value={fam} onChange={e => setFam(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addFam())} placeholder="gobierno, gubernamental… (Enter để thêm)" />
-          <button type="button" className="btn btn-secondary" onClick={addFam}><Icon n="plus" s={16} />Thêm</button>
-        </div>
-        {f.family.length > 0 ? <div className="flex flex-wrap gap-2">{f.family.map(x => <span key={x} className="chip">{x}<button type="button" className="ml-1 t-muted hover:text-[var(--err)]" aria-label={'Bỏ ' + x} onClick={() => set('family', f.family.filter(y => y !== x))}><Icon n="x" s={14} /></button></span>)}</div>
-          : <p className="text-xs t-muted">Chưa có dạng từ nào.</p>}
+      <Section n="B" title="Từ liên quan">
+        <TagInput label="Họ từ (các dạng từ cùng gốc)" items={f.family} onChange={v => set('family', v)} placeholder="gobierno, gubernamental… (Enter để thêm)" />
+        <TagInput label="Đồng nghĩa" items={f.syn} onChange={v => set('syn', v)} placeholder="Enter để thêm" />
       </Section>
       <Section n="C" title="Câu ví dụ">
         <div className="grid sm:grid-cols-2 gap-4">
@@ -486,8 +730,13 @@ function AddForm({ initial, onSave, onCancel, topics, settings }) {
           <Field label="Bản dịch tiếng Việt"><textarea rows="3" className="input" value={f.exVi} onChange={e => set('exVi', e.target.value)} /></Field>
         </div>
       </Section>
-      <Section n="D" title="Ghi chú chuyên ngành">
-        <textarea rows="3" aria-label="Ghi chú chuyên ngành" className="input" value={f.note} onChange={e => set('note', e.target.value)} placeholder="Collocations, false friends, ngữ cảnh sử dụng…" />
+      <Section n="D" title="Giải thích, ghi chú và nguồn">
+        <Field label="Giải thích / định nghĩa (không bắt buộc)"><textarea rows="2" className="input" value={f.def} onChange={e => set('def', e.target.value)} /></Field>
+        <Field label="Ghi chú chuyên ngành (collocations, false friends…)"><textarea rows="2" className="input" value={f.note} onChange={e => set('note', e.target.value)} /></Field>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <Field label="Nguồn / link tham khảo"><input className="input" value={f.src} onChange={e => set('src', e.target.value)} placeholder="https://… hoặc tên tài liệu" /></Field>
+          <Field label="Trạng thái"><select className="input" value={f.status} onChange={e => set('status', e.target.value)}><option value="new">Mới, cần kiểm tra</option><option value="ok">Đã kiểm chứng</option></select></Field>
+        </div>
       </Section>
       {msg && <Notice text={msg} />}
       <div className="card p-3 flex gap-2 justify-end sticky bottom-20 md:bottom-4 z-30">
@@ -675,6 +924,32 @@ function Settings({ settings, setSettings, words, setWords, tombs, applyState, o
   const [codeOut, setCodeOut] = useState('');
   const [codeIn, setCodeIn] = useState('');
   const [codeMsg, setCodeMsg] = useState('');
+  const [xlMode, setXlMode] = useState('es-vi');
+  const [xlBusy, setXlBusy] = useState(false);
+  const [xlMsg, setXlMsg] = useState('');
+  const xlRef = useRef();
+  const onImportXlsx = async e => {
+    const file = e.target.files[0]; e.target.value = '';
+    if (!file) return;
+    setXlBusy(true); setXlMsg('');
+    try {
+      const r = await importXlsx(file);
+      if (!r.items.length) throw new Error('Không nhận ra bảng thuật ngữ nào (cần có cột Término và Equivalente).');
+      if (confirm(`Tìm thấy ${r.items.length} dòng hợp lệ trong ${r.sheets.length} sheet (bỏ qua ${r.skipped.length} sheet không có bảng thuật ngữ). Nhập vào thư viện? Từ trùng sẽ được bỏ qua.`)) {
+        const res = mergeWords(words, r.items, false, {});
+        setWords(res.list);
+        setXlMsg(`Đã nhập ${res.added} thuật ngữ mới, bỏ qua ${res.skipped} dòng trùng.`);
+      }
+    } catch (err) { setXlMsg('Không nhập được: ' + err.message); }
+    setXlBusy(false);
+  };
+  const doXlsx = async () => {
+    if (!words.length) return setXlMsg('Chưa có thuật ngữ để xuất.');
+    setXlBusy(true); setXlMsg('');
+    try { const r = await exportXlsx(words, xlMode); setXlMsg(`Đã xuất ${r.rows} dòng trong ${r.sheets} sheet.`); }
+    catch (e) { setXlMsg('Không xuất được: ' + e.message); }
+    setXlBusy(false);
+  };
   const makeCode = async () => { try { setCodeOut(await encodeCode({ version: 1, words, deleted: tombs })); setCodeMsg(`Đã tạo mã cho ${words.length} từ.`); } catch (e) { setCodeMsg('Không tạo được mã: ' + e.message); } };
   const copyCode = async () => { try { await navigator.clipboard.writeText(codeOut); setCodeMsg('Đã sao chép mã.'); } catch (e) { setCodeMsg('Không tự sao chép được, hãy bôi đen ô mã rồi copy.'); } };
   const applyCode = async () => {
@@ -768,6 +1043,17 @@ function Settings({ settings, setSettings, words, setWords, tombs, applyState, o
         {canInstall ? <button className={btnMain} onClick={onInstall}>Cài đặt ứng dụng</button> : <p className="text-sm t-muted">Nút cài đặt chỉ hiện khi trình duyệt cho phép (cần mở bằng link https, không phải file trên máy, và chưa cài trước đó).</p>}
       </section>
       <section className="card p-5 space-y-3">
+        <h2 className="h-display text-lg font-bold">Excel: xuất và nhập theo cấu trúc glosario</h2>
+        <p className="text-sm t-muted">Mỗi chủ đề là một sheet, giống các glosario K22, BDTC và DN2: dòng 1 là tên chủ đề, dòng 2 là tiêu đề cột, cố định ba cột đầu, có bộ lọc. Các dòng xếp theo Subtema và có sheet “Tổng quan”. File xuất ra cũng nhập lại được, và có thể nhập các glosario sinh viên có cột Término/Equivalente.</p>
+        <Seg label="Hướng dịch khi xuất" value={xlMode} onChange={setXlMode} options={[['es-vi', 'ES → VI'], ['vi-es', 'VI → ES'], ['both', 'Cả hai chiều']]} />
+        <div className="flex flex-wrap gap-2">
+          <button className={btnMain} disabled={xlBusy} onClick={doXlsx}>{xlBusy ? <><span className="spin" />Đang xử lý…</> : 'Xuất Excel (.xlsx)'}</button>
+          <button className={btnSoft} disabled={xlBusy} onClick={() => xlRef.current.click()}>Nhập từ Excel (.xlsx)</button>
+          <input ref={xlRef} type="file" accept=".xlsx" className="hidden" onChange={onImportXlsx} />
+        </div>
+        {xlMsg && <Notice text={xlMsg} />}
+      </section>
+      <section className="card p-5 space-y-3">
         <h2 className="h-display text-lg font-bold">Sao lưu dữ liệu</h2>
         <div className="flex flex-wrap gap-2">
           <button className={btnMain} onClick={() => download('glosario-es-vi.json', JSON.stringify(words, null, 2), 'application/json')}>Xuất JSON</button>
@@ -808,6 +1094,11 @@ function App() {
   useEffect(() => save(KEY + '_cfg', settings), [settings]);
   useEffect(() => { document.documentElement.classList.toggle('dark', dark); save('glo_dark', dark ? '1' : '0'); try { localStorage.setItem('glo_dark', dark ? '1' : '0'); } catch (e) {} }, [dark]);
   const topics = useMemo(() => [...new Set([...TOPICS, ...words.map(w => w.topic).filter(Boolean)])], [words]);
+  const subMap = useMemo(() => {
+    const m = {};
+    words.forEach(w => { if (w.sub) (m[w.topic] = m[w.topic] || new Set()).add(w.sub); });
+    return Object.fromEntries(Object.entries(m).map(([k, v]) => [k, [...v].sort((a, b) => a.localeCompare(b, 'vi'))]));
+  }, [words]);
 
   const syncNow = async (silent) => {
     setSyncing(true);
@@ -948,7 +1239,7 @@ function App() {
       <main className="max-w-[1200px] mx-auto px-4 py-6 pb-28 md:pb-12">
         {tab === 'lib' && <Library words={words} topics={topics} q={q} setQ={setQ} topic={topic} setTopic={setTopic} emph={settings.emph} setEmph={v => setSettings(c => ({ ...c, emph: v }))} view={settings.view} setView={v => setSettings(c => ({ ...c, view: v }))}
           onAdd={() => setTab('add')} onEdit={w => { setEditing(w); setTab('add'); }} onDelete={deleteWord} />}
-        {tab === 'add' && <AddForm key={editing ? editing.id : 'new'} initial={editing} topics={topics} settings={settings}
+        {tab === 'add' && <AddForm key={editing ? editing.id : 'new'} initial={editing} topics={topics} settings={settings} subMap={subMap}
           onSave={saveWord} onCancel={editing ? () => { setEditing(null); setTab('lib'); } : null} />}
         {tab === 'card' && <Cards words={words} topics={topics} />}
         {tab === 'drill' && <Drill words={words} topics={topics} sound={settings.sound} setSound={v => setSettings(c => ({ ...c, sound: v }))} />}
