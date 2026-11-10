@@ -336,12 +336,14 @@ const importXlsx = async file => {
     const vt = sm.reduce((a, x) => a + viCount(x.t), 0), ve = sm.reduce((a, x) => a + viCount(x.e), 0);
     const th = map.term[0].h;
     const viFirst = vt !== ve ? vt > ve : th.includes('vietnam') ? true : th.includes('espanol') ? false : /\bvie?\b[\s-]*es/.test(nm);
-    const topic = ws.name.replace(/^\s*\d+\s*[.)-]\s*/, '')
+    const topic = ws.name.replace(/\s+/g, ' ').replace(/^\s*\d+\s*[.)-]\s*/, '')
       .replace(/\s*[-–]?\s*\b(es|esp)\b\s*[-–]\s*\b(vi|vie)\b\s*$/i, '').replace(/\s*[-–]?\s*\b(vi|vie)\b\s*[-–]\s*\b(es|esp)\b\s*$/i, '')
-      .replace(/\s+(esp|vie)\s*$/i, '').trim() || 'Chung';
+      .replace(/\s+(esp|vie)\s*$/i, '').replace(/\s+\d+\s*$/, '').trim() || 'Chung';
     const one = s => s.replace(/\s*\n\s*/g, '; ');
     rows.forEach(({ row, t, e }) => {
       const g = k => (map[k] || []).map(x => cellText(row.getCell(x.ci).value).trim()).filter(Boolean);
+      const vt1 = viCount(t), ve1 = viCount(e);
+      const vf = vt1 > 0 && ve1 === 0 ? true : ve1 > 0 && vt1 === 0 ? false : viFirst;
       let exEs = '', exVi = '';
       [g('ex').join(' '), g('trad').join(' ')].forEach(x => { if (!x) return; if (viCount(x) >= 2) exVi = exVi || x; else exEs = exEs || x; });
       const defeq = g('defeq')[0];
@@ -350,7 +352,7 @@ const importXlsx = async file => {
       const pr = (g('pos')[0] || '');
       const pos = POS.find(x => x.toLowerCase() === pr.toLowerCase()) || POS_FROM[pr.toLowerCase().replace(/[()\s]/g, '')] || (/\s/.test(t) ? 'Cụm từ' : 'Danh từ');
       items.push({
-        ...emptyForm, es: one(viFirst ? e : t), vi: one(viFirst ? t : e), pos, topic, sub: (g('sub')[0] || '').replace(/\s*\n\s*/g, ' '),
+        ...emptyForm, es: one(vf ? e : t), vi: one(vf ? t : e), pos, topic, sub: (g('sub')[0] || '').replace(/\s*\n\s*/g, ' '),
         family: splitList(g('family').join(';')), syn: splitList(g('syn').join(';')), def: g('def').join(' '), exEs, exVi, note, src: url,
         status: /^(si|x|ok|✓)$/.test(norm(g('status')[0] || '')) ? 'ok' : 'new'
       });
